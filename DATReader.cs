@@ -4,7 +4,7 @@ using System.IO;
 
 namespace DATLib
 {
-    public enum DatError
+    internal enum DatError
     {
         Fallout1DAT,
         IOError,
@@ -12,34 +12,32 @@ namespace DATLib
         WrongSize
     };
 
-    public class DatReaderError
+    internal class DatReaderError
     {
-        public DatReaderError(DatError error, string Message)
+        internal DatReaderError(DatError error, string Message)
         {
             this.Error = error;
             this.Message = Message;
         }
-        public DatError Error { get; set; }
-        public string Message { get; set; }
+        internal DatError Error { get; set; }
+        internal string Message { get; set; }
     }
 
     // TODO: Implement FO1 dat support
-    public static class DATReader
+    internal static class DATReader
     {
         // Based on code by Dims
         public static DAT ReadDat(string filename, out DatReaderError error)
         {
             if (String.IsNullOrEmpty(filename))
             {
-                error = new DatReaderError(DatError.IOError, "Invalid filename: '" + filename  + "'");
+                error = new DatReaderError(DatError.IOError, "Invalid DAT filename.");
                 return null;
             }
 
-            List<string> dirs = new List<string>();
-
             DAT dat = new DAT();
             dat.DatFileName = filename;
-            BinaryReader br=null;
+            BinaryReader br = null;
             try
             {
                 br = new BinaryReader(File.Open(filename, FileMode.Open));
@@ -53,8 +51,8 @@ namespace DATLib
             br.BaseStream.Seek(-8, SeekOrigin.End);
             dat.TreeSize = br.ReadInt32();
             dat.FileSizeFromDat = br.ReadInt32();
-            
-            br.BaseStream.Seek(0, SeekOrigin.Begin); 
+
+            br.BaseStream.Seek(0, SeekOrigin.Begin);
             ulong F1DirCount = ToLittleEndian((ulong)br.ReadInt32());
             if (F1DirCount == 0x01 || F1DirCount == 0x33) // Check if it's Fallout 1 dat
             {
@@ -71,9 +69,8 @@ namespace DATLib
             dat.FilesTotal = br.ReadInt32();
             byte[] buff = new byte[dat.TreeSize];
             br.Read(buff, 0, (int)(dat.TreeSize - 4));
-            dat.FileList = FindFiles(dat, br);
 
-            error = new DatReaderError(DatError.Success, "");
+            error = new DatReaderError(DatError.Success, string.Empty);
             return dat;
         }
 
@@ -81,15 +78,15 @@ namespace DATLib
         {
             dat.br.Close();
             BinaryWriter bw = new BinaryWriter(File.Open(filename, FileMode.Create));
-            int i=0;
+            int i = 0;
             while (i < dat.FilesTotal) // Write DataBlock
             {
                 dat.FileList[i].Offset = (int)bw.BaseStream.Position;
-                bw.Write(dat.FileList[i].Buffer, 0, dat.FileList[i].Buffer.Length);
+                bw.Write(dat.FileList[i].dataBuffer, 0, dat.FileList[i].dataBuffer.Length);
                 i++;
             }
             bw.Write((int)dat.FilesTotal);
-            i=0;
+            i = 0;
             int treeSize = (int)bw.BaseStream.Position;
             while (i < dat.FilesTotal) // Write DirTree
             {
@@ -102,10 +99,10 @@ namespace DATLib
                 i++;
             }
             bw.Write((int)(bw.BaseStream.Position - treeSize) + 4);
-            bw.Write((int)bw.BaseStream.Position+4);
+            bw.Write((int)bw.BaseStream.Position + 4);
         }
 
-        public static List<DATFile> FindFiles(DAT dat, BinaryReader br)
+        internal static List<DATFile> FindFiles(DAT dat, BinaryReader br)
         {
             List<DATFile> DatFiles = new List<DATFile>();
 
@@ -118,20 +115,15 @@ namespace DATLib
                 file.FileNameSize = br.ReadInt32();
                 char[] namebuf = new Char[file.FileNameSize];
                 br.Read(namebuf, 0, (int)file.FileNameSize);
-                file.Path = new String(namebuf, 0, namebuf.Length);
-                file.FileName = Path.GetFileName(file.Path);
+                string pathFile = new String(namebuf, 0, namebuf.Length);
+                file.FileName = Path.GetFileName(pathFile);
+                file.Path = pathFile.ToLower();
+
                 file.Compression = br.ReadByte();
                 file.UnpackedSize = br.ReadInt32();
                 file.PackedSize = br.ReadInt32();
-                if (file.Compression==0x00&&(file.UnpackedSize != file.PackedSize))
-                        file.Compression = 1;
+                if (file.Compression == 0x00 && (file.UnpackedSize != file.PackedSize)) file.Compression = 1;
                 file.Offset = br.ReadInt32();
-                long oldoffset = br.BaseStream.Position;
-                // Read whole file into a buffer
-                br.BaseStream.Position = file.Offset;
-                file.Buffer = new Byte[file.PackedSize];
-                br.Read(file.Buffer, 0, file.PackedSize);
-                br.BaseStream.Position = oldoffset;
 
                 DatFiles.Add(file);
                 FileIndex++;
@@ -139,11 +131,22 @@ namespace DATLib
             return DatFiles;
         }
 
-        public static ulong ToLittleEndian(ulong value)
+        internal static DATFile GetFile(DAT dat, string filename)
+        {
+            filename = filename.ToLower();
+
+            foreach (DATFile file in dat.FileList)
+            {
+                if (file.Path == filename) return file;
+            }
+            return null;
+        }
+
+        private static ulong ToLittleEndian(ulong value)
         {
             byte[] temp = BitConverter.GetBytes(value);
             Array.Reverse(temp);
-            return (ulong)BitConverter.ToInt32(temp,0);
+            return (ulong)BitConverter.ToInt32(temp, 0);
         }
     }
 }

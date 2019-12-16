@@ -3,19 +3,20 @@ using System.IO;
 
 namespace DATLib
 {
-    public class DATFile
+    internal class DATFile
     {
-        public BinaryReader br { get; set; }
-        public String Path { get; set; }
-        public String FileName { get; set; }
-        public byte Compression { get; set; }
-        public int UnpackedSize { get; set; }
-        public int PackedSize { get; set; }
-        public int Offset { get; set; }
-        public byte[] Buffer { get; set; } // Whole file
-        public long FileIndex { get; set; }
-        public long FileNameSize { get; set; }
-        public string ErrorMsg { get; set; }
+        internal BinaryReader br { get; set; }
+        internal String Path { get; set; }
+        internal String FileName { get; set; }
+        internal byte Compression { get; set; }
+        internal int UnpackedSize { get; set; }
+        internal int PackedSize { get; set; }
+        internal int Offset { get; set; }
+        internal long FileIndex { get; set; }
+        internal long FileNameSize { get; set; }
+        internal string ErrorMsg { get; set; }
+
+        internal byte[] dataBuffer { get; set; } // Whole file
 
         private byte[] compressStream(MemoryStream mem)
         {
@@ -69,27 +70,38 @@ namespace DATLib
             return data;
         }
 
-        public byte[] GetCompressedData()
+        internal byte[] GetCompressedData()
         {
             if (Compression == 0x01)
-                return Buffer;
+                return dataBuffer;
             else
             {
-                MemoryStream st = new MemoryStream(Buffer);
+                MemoryStream st = new MemoryStream(dataBuffer);
                 byte[] compressed = compressStream(st);
                 PackedSize = compressed.Length;
                 return compressed;
             }
         }
 
-        public byte[] GetData()
+        private byte[] GetData()
         {
             if (Compression == 0x01)
             {
-                using (MemoryStream st = new MemoryStream(Buffer))
+                using (MemoryStream st = new MemoryStream(dataBuffer))
                     return decompressStream(st);
             }
-            return Buffer;
+            return dataBuffer;
+        }
+
+        // Read whole file into a buffer
+        internal byte[] GetFileData()
+        {
+            if (dataBuffer == null) {
+                br.BaseStream.Position = Offset;
+                dataBuffer = new Byte[PackedSize];
+                br.Read(dataBuffer, 0, PackedSize);
+            }
+            return GetData();
         }
     }
 }
