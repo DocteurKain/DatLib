@@ -1,21 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using DATLib.FO1;
 
 namespace DATLib
 {
     // This is a helper class for handling multiple DAT files.
+    // https://fallout.fandom.com/wiki/DAT_file
     internal class DAT
     {
-        //public bool lError { get; set; }
-        //public uint ErrorType { get; set; }
-
         public BinaryReader br { get; set; }
+
         public String DatFileName { get; set; }
         public List<DATFile> FileList { get; set; }
+
         public long FileSizeFromDat { get; set; }
         public long TreeSize { get; set; }
         public long FilesTotal { get; set; }
+
+        // only for Fallout 1 DAT
+        public long DirCount { get; set; }
+
+        public bool IsFallout2Type
+        {
+            get { return DirCount == 0; }
+        }
 
         public void Close()
         {
@@ -35,7 +44,7 @@ namespace DATLib
         {
             List<DATFile> Files = new List<DATFile>();
             foreach (DATFile file in FileList) {
-                if ((pattern == "") || (file.Path.Contains(pattern) && ((CountChar(file.Path, '\\') - 1 == CountChar(pattern, '\\')))))
+                if ((pattern == string.Empty) || (file.Path.Contains(pattern) && ((CountChar(file.Path, '\\') - 1 == CountChar(pattern, '\\')))))
                     Files.Add(file);
             }
             return Files;
@@ -49,7 +58,7 @@ namespace DATLib
             file.dataBuffer = File.ReadAllBytes(filename);
             file.UnpackedSize = file.dataBuffer.Length;
             file.PackedSize = file.dataBuffer.Length;
-            file.Compression = 0x00;
+            file.Compression = false;
             FileList.Add(file);
             FilesTotal++;
         }
@@ -57,7 +66,7 @@ namespace DATLib
         public DATFile GetFileByName(string filename)
         {
             foreach (DATFile file in FileList) {
-                if (file.Path == filename) return file;
+                if (file.FileName == filename) return file;
             }
             return null;
         }

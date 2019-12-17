@@ -5,16 +5,18 @@ namespace DATLib
 {
     internal class DATFile
     {
-        internal BinaryReader br { get; set; }
-        internal String Path { get; set; }
-        internal String FileName { get; set; }
-        internal byte Compression { get; set; }
+        internal BinaryReader br  { get; set; }
+        internal String Path      { get; set; } // path and name in lower case
+        internal String FileName  { get; set; }
+
+        internal bool Compression { get; set; }
         internal int UnpackedSize { get; set; }
-        internal int PackedSize { get; set; }
-        internal int Offset { get; set; }
-        internal long FileIndex { get; set; }
-        internal long FileNameSize { get; set; }
-        internal string ErrorMsg { get; set; }
+        internal int PackedSize   { get; set; }
+        internal int Offset       { get; set; }
+        internal int FileNameSize { get; set; }
+
+        //internal long FileIndex { get; set; } // index of file in DAT
+        internal string ErrorMsg  { get; set; }
 
         internal byte[] dataBuffer { get; set; } // Whole file
 
@@ -42,7 +44,7 @@ namespace DATLib
             return data;
         }
 
-        private byte[] decompressStream(MemoryStream mem)
+        internal virtual byte[] decompressStream(MemoryStream mem)
         {
             byte[] data;
             using (MemoryStream outStream = new MemoryStream())
@@ -72,23 +74,25 @@ namespace DATLib
 
         internal byte[] GetCompressedData()
         {
-            if (Compression == 0x01)
+            if (Compression)
                 return dataBuffer;
             else
             {
-                MemoryStream st = new MemoryStream(dataBuffer);
-                byte[] compressed = compressStream(st);
-                PackedSize = compressed.Length;
-                return compressed;
+                using (MemoryStream st = new MemoryStream(dataBuffer)) {
+                    byte[] compressed = compressStream(st);
+                    PackedSize = compressed.Length;
+                    return compressed;
+                }
             }
         }
 
         private byte[] GetData()
         {
-            if (Compression == 0x01)
+            if (Compression)
             {
-                using (MemoryStream st = new MemoryStream(dataBuffer))
+                using (MemoryStream st = new MemoryStream(dataBuffer)) {
                     return decompressStream(st);
+                }
             }
             return dataBuffer;
         }
@@ -97,9 +101,10 @@ namespace DATLib
         internal byte[] GetFileData()
         {
             if (dataBuffer == null) {
-                br.BaseStream.Position = Offset;
-                dataBuffer = new Byte[PackedSize];
-                br.Read(dataBuffer, 0, PackedSize);
+                br.BaseStream.Seek(Offset, SeekOrigin.Begin);
+                int size = (Compression) ? PackedSize : UnpackedSize;
+                dataBuffer = new Byte[size];
+                br.Read(dataBuffer, 0, size);
             }
             return GetData();
         }

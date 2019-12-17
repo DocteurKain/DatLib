@@ -16,13 +16,13 @@ namespace DATLib
             {
                 if (dat.DatFileName == datFile) {
                     eMessage = string.Empty;
-                    return true; // dat файл уже открыт
+                    return true; // DAT file is already open
                 }
             }
             DatReaderError err;
             DAT datData = DATReader.ReadDat(datFile, out err);
             if (datData != null) {
-                datData.FileList = DATReader.FindFiles(datData, datData.br);
+                datData.FileList = DATReader.FindFiles(datData);
                 openDat.Add(datData);
             }
             eMessage = err.Message;
@@ -68,6 +68,12 @@ namespace DATLib
                 }
             }
             return false;
+        }
+
+        public static void CloseAllDatFiles()
+        {
+            foreach (DAT dat in openDat) dat.Close();
+            openDat.Clear();
         }
     }
 }
