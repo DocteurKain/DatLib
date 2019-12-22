@@ -104,7 +104,7 @@ namespace DATLib
             while (i < dat.FilesTotal) // Write DirTree
             {
                 bw.Write((int)dat.FileList[i].FileNameSize);
-                bw.Write(dat.FileList[i].Path.ToCharArray(0, dat.FileList[i].Path.Length));
+                bw.Write(dat.FileList[i].FilePath.ToCharArray(0, dat.FileList[i].FilePath.Length));
                 bw.Write(dat.FileList[i].Compression);
                 bw.Write(dat.FileList[i].UnpackedSize);
                 bw.Write(dat.FileList[i].PackedSize);
@@ -132,7 +132,8 @@ namespace DATLib
                     br.Read(namebuf, 0, (int)file.FileNameSize);
                     string pathFile = new String(namebuf, 0, namebuf.Length);
                     file.FileName = Path.GetFileName(pathFile);
-                    file.Path = pathFile.ToLower();
+                    file.FilePath = pathFile.ToLower();
+                    file.Path = Path.GetDirectoryName(pathFile);
 
                     file.Compression = (br.ReadByte() == 0x1);
                     file.UnpackedSize = br.ReadInt32();
@@ -148,7 +149,7 @@ namespace DATLib
                 List<string> directories = new List<string>();
                 for (var i = 0; i < dat.DirCount; i++)
                 {
-                    directories.Add(ReadString(br).ToLower());
+                    directories.Add(ReadString(br));
                 }
 
                 br = new BinaryBigEndian(br.BaseStream);
@@ -165,7 +166,9 @@ namespace DATLib
                         file.Offset = br.ReadInt32();
                         file.UnpackedSize = br.ReadInt32();
                         file.PackedSize = br.ReadInt32();
-                        file.Path = directories[i] + '\\' + file.FileName.ToLower();
+                        file.Path = directories[i];
+                        file.FilePath = (directories[i] + '\\' + file.FileName).ToLower();
+
                         DatFiles.Add(file);
                     }
                 }
@@ -179,7 +182,7 @@ namespace DATLib
 
             foreach (DATFile file in dat.FileList)
             {
-                if (file.Path == filename) return file;
+                if (file.FilePath == filename) return file;
             }
             return null;
         }

@@ -5,7 +5,7 @@ namespace DATLib
 {
     internal class DAT1File : DATFile
     {
-        internal override byte[] decompressStream(MemoryStream mem)
+        private byte[] decompressStream(MemoryStream mem)
         {
             BinaryBigEndian bbr = new BinaryBigEndian(mem);
             bbr.BaseStream.Seek(0, SeekOrigin.Begin);
@@ -15,6 +15,17 @@ namespace DATLib
 
             bbr.Dispose();
             return bytes;
+        }
+
+        internal override byte[] GetData()
+        {
+            if (Compression) {
+                using (MemoryStream st = new MemoryStream(dataBuffer))
+                {
+                    return decompressStream(st);
+                }
+            }
+            return dataBuffer;
         }
 
         /*

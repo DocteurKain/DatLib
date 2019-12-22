@@ -36,6 +36,7 @@
     <Compile Include="DATFile.cs" />
     <Compile Include="DATReader.cs" />
     <Compile Include="DATManage.cs" />
+    <Compile Include="ExtractEventArgs.cs" />
     <Compile Include="FO1\BinaryBigEndian.cs" />
     <Compile Include="DAT1File.cs" />
     <Compile Include="FO1\LZSS.cs" />
