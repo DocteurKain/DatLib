@@ -48,12 +48,10 @@ namespace DATLib
             return (err.Error == DatError.Success);
         }
 
-        private static void SaveFile(string filePath, DATFile datfile)
+        private static bool SaveFile(string filePath, DATFile datfile)
         {
             byte[] data = datfile.GetFileData();
-            if (data == null) {
-                return;
-            }
+            if (data == null) return false;
 
             if (lastCheckFolder != datfile.Path) {
                 string path = Path.GetFullPath(Path.GetDirectoryName(filePath));
@@ -61,6 +59,7 @@ namespace DATLib
                 lastCheckFolder = datfile.Path;
             }
             File.WriteAllBytes(filePath, data);
+            return true;
         }
 
         public static bool ExtractAllFiles(string unpackPath, string datFile)
@@ -84,7 +83,7 @@ namespace DATLib
             return false;
         }
 
-        public static bool UnpackFile(string unpackPath, string file, string datFile)
+        public static bool ExtractFile(string unpackPath, string file, string datFile)
         {
             foreach (DAT dat in openDat)
             {
@@ -93,14 +92,13 @@ namespace DATLib
                     DATFile datfile = DATReader.GetFile(dat, file);
                     if (datfile == null) return false;
 
-                    SaveFile(unpackPath + file, datfile);
-                    return true;
+                    return SaveFile(unpackPath + file, datfile);
                 }
             }
             return false;
         }
 
-        public static bool UnpackFileList(string unpackPath, string[] files, string datFile)
+        public static bool ExtractFileList(string unpackPath, string[] files, string datFile)
         {
             foreach (DAT dat in openDat)
             {
@@ -121,7 +119,7 @@ namespace DATLib
             return false;
         }
 
-        public static bool UnpackFileList(string unpackPath, string[] files, string datFile, string cutoffPath)
+        public static bool ExtractFileList(string unpackPath, string[] files, string datFile, string cutoffPath)
         {
             foreach (DAT dat in openDat)
             {
