@@ -5,6 +5,8 @@ namespace DATLib
 {
     public class DATFile
     {
+        protected static byte[] tempBuffer { get; set; } // temp buffer for extracted file
+
         internal BinaryReader br  { get; set; }
         internal String FilePath  { get; set; } // path and name in lower case
         internal String FileName  { get; set; } // file name with case letters
@@ -83,7 +85,7 @@ namespace DATLib
                 {
                     try
                     {
-                        outZStream.Write(dataBuffer, 0, dataBuffer.Length);
+                        outZStream.Write(tempBuffer, 0, tempBuffer.Length);
                         outZStream.Flush();
                         data = outStream.ToArray();
                     }
@@ -128,18 +130,18 @@ namespace DATLib
 
         internal virtual byte[] GetData()
         {
-            return (Compression) ? decompressData() : dataBuffer;
+            return (Compression) ? decompressData() : tempBuffer;
         }
 
         // Read whole file into a buffer
         internal byte[] GetFileData()
         {
-            if (dataBuffer == null) {
+            //if (dataBuffer == null) {
                 br.BaseStream.Seek(Offset, SeekOrigin.Begin);
                 int size = (Compression) ? PackedSize : UnpackedSize;
-                dataBuffer = new Byte[size];
-                br.Read(dataBuffer, 0, size);
-            }
+                tempBuffer = new Byte[size];
+                br.Read(tempBuffer, 0, size);
+            //}
             return GetData();
         }
     }

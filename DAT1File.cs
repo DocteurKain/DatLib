@@ -20,12 +20,12 @@ namespace DATLib
         internal override byte[] GetData()
         {
             if (Compression) {
-                using (MemoryStream st = new MemoryStream(dataBuffer))
+                using (MemoryStream st = new MemoryStream(tempBuffer))
                 {
                     return decompressStream(st);
                 }
             }
-            return dataBuffer;
+            return tempBuffer;
         }
 
         /*
