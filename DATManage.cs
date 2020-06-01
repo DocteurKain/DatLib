@@ -8,8 +8,8 @@ namespace DATLib
 {
     public struct Info
     {
-        public int  Size;
-        public int  PackedSize;
+        public int Size;
+        public int PackedSize; // -1 - для файла находящегося вне dat
         public bool IsPacked;
     }
 

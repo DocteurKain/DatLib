@@ -12,11 +12,11 @@ namespace DATLib
         internal String FileName  { get; set; } // file name with case letters
         internal String Path      { get; set; } // only path to file
 
-        internal bool Compression { get; set; }
-        internal int UnpackedSize { get; set; }
-        internal int PackedSize   { get; set; }
-        internal int Offset       { get; set; }
-        internal int FileNameSize { get; set; }
+        internal bool Compression  { get; set; }
+        internal int  UnpackedSize { get; set; }
+        internal int  PackedSize   { get; set; }
+        internal int  Offset       { get; set; }
+        internal int  FileNameSize { get; set; }
 
         //internal long FileIndex { get; set; } // index of file in DAT
         internal string ErrorMsg  { get; set; }

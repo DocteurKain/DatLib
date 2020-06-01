@@ -57,22 +57,15 @@ namespace DATLib
             {
                 br.BaseStream.Seek(0, SeekOrigin.Begin);
                 dat.DirCount = ToLittleEndian(br.ReadInt32());
-                Int64 datMarker = br.ReadInt64(); // unknown1, unknown2
-                if (datMarker == 0x0A000000 || datMarker == 0x5E000000) // it's Fallout 1 dat
-                {
-                    if (dat.DirCount != 0x01 && dat.DirCount != 0x33)
-                    {
-                        error = new DatReaderError(DatError.InvalidDAT, "Fallout 1 DATs not supported.");
-                        return null;
-                    }
+                if ((dat.DirCount & 0xFF00000) == 0) { // it's Fallout 1 dat ?
                     dat.TreeSize = 0;
                     dat.FileSizeFromDat = 0;
-                    br.BaseStream.Position += 4; // unknown3
+                    br.BaseStream.Position += 12; // unknown1, unknown2, unknown3 fields
 
                     error = new DatReaderError(DatError.Success, string.Empty);
                     return dat;
                 }
-                error = new DatReaderError(DatError.WrongSize, "Size is incorrect.");
+                error = new DatReaderError(DatError.WrongSize, "Dat file size is incorrect.");
                 return null;
             }
 
@@ -87,6 +80,7 @@ namespace DATLib
             return dat;
         }
 
+        // Create new dat
         public static void WriteDat(DAT dat, string filename)
         {
             dat.br.Close();
@@ -95,7 +89,7 @@ namespace DATLib
             while (i < dat.FilesTotal) // Write DataBlock
             {
                 dat.FileList[i].Offset = (int)bw.BaseStream.Position;
-                bw.Write(dat.FileList[i].dataBuffer, 0, dat.FileList[i].dataBuffer.Length);
+                bw.Write(dat.FileList[i].GetCompressedData(), 0, dat.FileList[i].PackedSize);
                 i++;
             }
             bw.Write((int)dat.FilesTotal);
