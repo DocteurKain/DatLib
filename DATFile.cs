@@ -5,9 +5,10 @@ namespace DATLib
 {
     public class DATFile
     {
-        protected static byte[] tempBuffer { get; set; } // temp buffer for extracted file
+        protected static byte[] tempBuffer; // temp buffer for extracted file
 
-        internal BinaryReader br  { get; set; }
+        internal BinaryReader br;
+
         internal String FilePath  { get; set; } // path and name in lower case
         internal String FileName  { get; set; } // file name with case letters
         internal String Path      { get; set; } // only path to file
@@ -18,45 +19,63 @@ namespace DATLib
         internal int  Offset       { get; set; }
         internal int  FileNameSize { get; set; }
 
-        //internal long FileIndex { get; set; } // index of file in DAT
         internal string ErrorMsg  { get; set; }
 
-        internal byte[] dataBuffer { get; set; } // Whole file
+        #if SaveBuild
 
-        private byte[] compressStream(MemoryStream mem)
+        internal String RealFile  { get; set; } // path to file on disc
+
+        internal bool IsVirtual { get { return PackedSize == -1; } }   // True - файл расположен вне DAT
+        internal bool IsDeleted { get;  set; }                         // True - файл будет удален из DAT при сохранении
+
+        private byte[] compressStream(FileStream file)
         {
             MemoryStream outStream = new MemoryStream();
             zlib.ZOutputStream outZStream = new zlib.ZOutputStream(outStream, zlib.zlibConst.Z_BEST_COMPRESSION);
-            byte[] data;
             try
             {
                 byte[] buffer = new byte[512];
                 int len;
-                while ((len = mem.Read(buffer, 0, 512)) > 0)
+                while ((len = file.Read(buffer, 0, 512)) > 0)
                 {
                     outZStream.Write(buffer, 0, len);
                 }
                 outZStream.finish();
-                data = outStream.ToArray();
+                tempBuffer = outStream.ToArray();
             }
             finally
             {
                 outZStream.Close();
                 outStream.Close();
             }
-            return data;
+            return tempBuffer;
         }
 
-        private byte[] decompressStream(MemoryStream mem)
+        internal virtual byte[] GetCompressedData()
+        {
+            if (RealFile == null) return null;
+
+            using (FileStream file = new FileStream(RealFile, FileMode.Open, FileAccess.Read)) {
+                byte[] compressed = compressStream(file);
+                PackedSize = compressed.Length;
+                RealFile = null;
+                return compressed;
+            }
+        }
+
+        #endif
+
+        private byte[] decompressStream()
         {
             byte[] data;
-            using (MemoryStream outStream = new MemoryStream()) {
+            using (MemoryStream outStream = new MemoryStream())
+            {
                 using (zlib.ZOutputStream outZStream = new zlib.ZOutputStream(outStream)) {
-                    byte[] buffer = new byte[mem.Length];
+                    byte[] buffer = new byte[br.BaseStream.Length];
                     int len;
                     try
                     {
-                        while ((len = mem.Read(buffer, 0, (int)mem.Length)) > 0) {
+                        while ((len = br.Read(buffer, 0, (int)br.BaseStream.Length)) > 0) {
                             outZStream.Write(buffer, 0, len);
                         }
                         outZStream.Flush();
@@ -76,7 +95,7 @@ namespace DATLib
             return data;
         }
 
-        private byte[] decompressData()
+        protected virtual byte[] DecompressData()
         {
             byte[] data;
             using (MemoryStream outStream = new MemoryStream())
@@ -103,46 +122,27 @@ namespace DATLib
             return data;
         }
 
-        internal byte[] GetCompressedData()
-        {
-            if (Compression)
-                return dataBuffer;
-            else
-            {
-                using (MemoryStream st = new MemoryStream(dataBuffer)) {
-                    byte[] compressed = compressStream(st);
-                    PackedSize = compressed.Length;
-                    return compressed;
-                }
-            }
-        }
-
-        private byte[] GetStreamData()
-        {
-            if (Compression) {
-                using (MemoryStream st = new MemoryStream(dataBuffer))
-                {
-                    return decompressStream(st);
-                }
-            }
-            return dataBuffer;
-        }
-
-        internal virtual byte[] GetData()
-        {
-            return (Compression) ? decompressData() : tempBuffer;
-        }
-
-        // Read whole file into a buffer
+        // Read whole file into a temp buffer
         internal byte[] GetFileData()
         {
-            //if (dataBuffer == null) {
-                br.BaseStream.Seek(Offset, SeekOrigin.Begin);
-                int size = (Compression) ? PackedSize : UnpackedSize;
-                tempBuffer = new Byte[size];
-                br.Read(tempBuffer, 0, size);
-            //}
-            return GetData();
+            if (br == null) return null;
+
+            br.BaseStream.Seek(Offset, SeekOrigin.Begin);
+            int size = (Compression) ? PackedSize : UnpackedSize;
+
+            if (tempBuffer == null || size != tempBuffer.Length) tempBuffer = new byte[size];
+
+            br.Read(tempBuffer, 0, size);
+            return (Compression) ? DecompressData() : tempBuffer;;
+        }
+
+        // Read file content from dat
+        internal byte[] GetDirectFileData()
+        {
+            if (br == null) return null;
+
+            br.BaseStream.Seek(Offset, SeekOrigin.Begin);
+            return br.ReadBytes((Compression) ? PackedSize : UnpackedSize);
         }
     }
 }

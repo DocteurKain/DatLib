@@ -11,15 +11,17 @@ namespace DATLib
     {
         internal BinaryReader br { get; set; }
 
-        internal String DatFileName { get; set; }
+        public String DatFileName { get; set;}
+
         internal List<DATFile> FileList { get; set; }
 
-        internal long FileSizeFromDat { get; set; }
-        internal long TreeSize { get; set; }
-        internal long FilesTotal { get; set; }
+        // only for Fallout 2 DAT
+        internal int FileSizeFromDat { get; set; }
+        internal int TreeSize { get; set; }
+        internal int FilesTotal { get; set; }
 
         // only for Fallout 1 DAT
-        internal long DirCount { get; set; }
+        internal int DirCount { get; set; }
 
         public bool IsFallout2Type
         {
@@ -50,19 +52,6 @@ namespace DATLib
             return Files;
         }
 
-        public void AddFile(string filename, string virtualfilename)
-        {
-            DATFile file = new DATFile();
-            file.FilePath = virtualfilename;
-            file.FileNameSize = System.Text.ASCIIEncoding.ASCII.GetByteCount(file.FilePath);
-            file.dataBuffer = File.ReadAllBytes(filename);
-            file.UnpackedSize = file.dataBuffer.Length;
-            file.PackedSize = file.dataBuffer.Length;
-            file.Compression = false;
-            FileList.Add(file);
-            FilesTotal++;
-        }
-
         public DATFile GetFileByName(string fileName)
         {
             foreach (DATFile file in FileList) {
@@ -70,5 +59,47 @@ namespace DATLib
             }
             return null;
         }
+
+        #if SaveBuild
+
+        public void AddFile(string filename, FileInfo virtualfile)
+        {
+            DATFile file = new DATFile();
+            file.Path = virtualfile.pathTree;
+            file.FileName = virtualfile.name;
+            file.FilePath = virtualfile.pathTree + virtualfile.name;
+            file.FileNameSize = System.Text.ASCIIEncoding.ASCII.GetByteCount(file.FilePath);
+
+            file.RealFile = filename;
+
+            file.UnpackedSize = virtualfile.info.Size;
+            file.PackedSize = -1;
+            file.Compression = false;
+            FileList.Add(file);
+            FilesTotal++;
+        }
+
+        public bool RemoveFile(List<string> filesList)
+        {
+            bool realDeleted = false;
+            foreach (var file in filesList)
+            {
+                for (int i = 0; i < FileList.Count; i++)
+                {
+                    if (FileList[i].IsVirtual) {
+                        FileList.RemoveAt(i--);
+                        break;
+                    } else if (FileList[i].FilePath == file) {
+                        FileList[i].IsDeleted = true;
+                        realDeleted = true;
+                        break;
+                    }
+                }
+            }
+            if (!IsFallout2Type) FilesTotal -= filesList.Count;
+            return realDeleted;
+        }
+
+        #endif
     }
 }

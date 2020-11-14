@@ -40,7 +40,7 @@ namespace DATLib
             BinaryReader br = null;
             try
             {
-                br = new BinaryReader(File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read));
+                br = new BinaryReader(File.Open(filename, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite));
             }
             catch (IOException io)
             {
@@ -80,35 +80,6 @@ namespace DATLib
             return dat;
         }
 
-        // Create new dat
-        public static void WriteDat(DAT dat, string filename)
-        {
-            dat.br.Close();
-            BinaryWriter bw = new BinaryWriter(File.Open(filename, FileMode.Create));
-            int i = 0;
-            while (i < dat.FilesTotal) // Write DataBlock
-            {
-                dat.FileList[i].Offset = (int)bw.BaseStream.Position;
-                bw.Write(dat.FileList[i].GetCompressedData(), 0, dat.FileList[i].PackedSize);
-                i++;
-            }
-            bw.Write((int)dat.FilesTotal);
-            i = 0;
-            int treeSize = (int)bw.BaseStream.Position;
-            while (i < dat.FilesTotal) // Write DirTree
-            {
-                bw.Write((int)dat.FileList[i].FileNameSize);
-                bw.Write(dat.FileList[i].FilePath.ToCharArray(0, dat.FileList[i].FilePath.Length));
-                bw.Write(dat.FileList[i].Compression);
-                bw.Write(dat.FileList[i].UnpackedSize);
-                bw.Write(dat.FileList[i].PackedSize);
-                bw.Write(dat.FileList[i].Offset);
-                i++;
-            }
-            bw.Write((int)(bw.BaseStream.Position - treeSize) + 4);
-            bw.Write((int)bw.BaseStream.Position + 4);
-        }
-
         internal static List<DATFile> FindFiles(DAT dat)
         {
             List<DATFile> DatFiles = new List<DATFile>();
@@ -139,14 +110,15 @@ namespace DATLib
                     DatFiles.Add(file);
                     FileIndex++;
                 }
-            } else { // Implement FO1 dat support: https://falloutmods.fandom.com/wiki/DAT_file_format
+            } else {
+                // Implement FO1 dat support: https://falloutmods.fandom.com/wiki/DAT_file_format
                 List<string> directories = new List<string>();
                 for (var i = 0; i < dat.DirCount; i++)
                 {
                     directories.Add(ReadString(br));
                 }
 
-                br = new BinaryBigEndian(br.BaseStream);
+                br = new RBinaryBigEndian(br.BaseStream);
                 for (var i = 0; i < dat.DirCount; i++)
                 {
                     var fileCount = br.ReadInt32();
@@ -156,7 +128,7 @@ namespace DATLib
                         DAT1File file = new DAT1File();
                         file.br = br;
                         file.FileName = ReadString(br);
-                        file.Compression = (((BinaryBigEndian)br).ReadUInt() == 0x40000000);
+                        file.Compression = (((RBinaryBigEndian)br).ReadUInt() == 0x40000000);
                         file.Offset = br.ReadInt32();
                         file.UnpackedSize = br.ReadInt32();
                         file.PackedSize = br.ReadInt32();

@@ -15,6 +15,7 @@ namespace DATLib
 
     public struct FileInfo
     {
+        public string pathTree;
         public string name;
         public Info info;
     }
@@ -48,7 +49,7 @@ namespace DATLib
             return (err.Error == DatError.Success);
         }
 
-        private static bool SaveFile(string filePath, DATFile datfile)
+        private static bool SaveExtractFile(string filePath, DATFile datfile)
         {
             byte[] data = datfile.GetFileData();
             if (data == null) return false;
@@ -62,6 +63,12 @@ namespace DATLib
             return true;
         }
 
+        /// <summary>
+        /// Раскаковывает все файлы из DAT
+        /// </summary>
+        /// <param name="unpackPath"></param>
+        /// <param name="datFile"></param>
+        /// <returns></returns>
         public static bool ExtractAllFiles(string unpackPath, string datFile)
         {
             foreach (DAT dat in openDat)
@@ -73,11 +80,43 @@ namespace DATLib
                         int n = datfile.FilePath.LastIndexOf('\\') + 1;
                         string filePath = datfile.FilePath.Remove(n) + datfile.FileName;
 
-                        OnExtracted(filePath);
+                        OnExtracted(filePath, true);
 
-                        SaveFile(unpackPath + filePath, datfile);
+                        SaveExtractFile(unpackPath + filePath, datfile);
                     }
                     return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Распаковывает все файлы из указанной папки DAT c сохранением структуры каталогов
+        /// </summary>
+        /// <param name="unpackPath">Путь куда необходимо распаковать</param>
+        /// <param name="datFolder">Папка DAT которую необходимо распаковать</param>
+        /// <param name="datFile"></param>
+        /// <returns></returns>
+        public static bool ExtractFolder(string unpackPath, string datFolder, string datFile)
+        {
+            foreach (DAT dat in openDat)
+            {
+                if (dat.DatFileName == datFile) {
+                    UnsetCheckFolder();
+
+                    //int len = datFolder.Length;
+                    //if (len > 0) len++;
+
+                    //foreach (DATFile datfile in dat.FileList)
+                    //{
+                    //    int n = datfile.FilePath.LastIndexOf('\\') + 1;
+                    //    string filePath = datfile.FilePath.Remove(n) + datfile.FileName;
+
+                    //    //OnExtracted(filePath);
+
+                    //    //SaveFile(unpackPath + filePath, datfile);
+                    //}
+                    //return true;
                 }
             }
             return false;
@@ -90,9 +129,7 @@ namespace DATLib
                 if (dat.DatFileName == datFile) {
                     UnsetCheckFolder();
                     DATFile datfile = DATReader.GetFile(dat, file);
-                    if (datfile == null) return false;
-
-                    return SaveFile(unpackPath + file, datfile);
+                    return (datfile != null) ? SaveExtractFile(unpackPath + file, datfile) : false;
                 }
             }
             return false;
@@ -107,11 +144,11 @@ namespace DATLib
                     foreach (var file in files)
                     {
                         DATFile datfile = DATReader.GetFile(dat, file);
-                        if (datfile == null) return false;
 
-                        OnExtracted(file);
+                        OnExtracted(file, datfile != null);
+                        if (datfile == null) continue;
 
-                        SaveFile(unpackPath + file, datfile);
+                        SaveExtractFile(unpackPath + file, datfile);
                     }
                     return true;
                 }
@@ -119,23 +156,33 @@ namespace DATLib
             return false;
         }
 
+        /// <summary>
+        /// Распаковывает список файлов в указанной папку
+        /// </summary>
+        /// <param name="unpackPath">Папка назначения</param>
+        /// <param name="files">Список файлов</param>
+        /// <param name="datFile"></param>
+        /// <param name="cutoffPath"></param>
+        /// <returns></returns>
         public static bool ExtractFileList(string unpackPath, string[] files, string datFile, string cutoffPath)
         {
             foreach (DAT dat in openDat)
             {
                 if (dat.DatFileName == datFile) {
                     UnsetCheckFolder();
+
                     int len = cutoffPath.Length;
                     if (len > 0) len++;
+
                     foreach (var file in files)
                     {
                         DATFile datfile = DATReader.GetFile(dat, file);
-                        if (datfile == null) return false;
 
-                        OnExtracted(file);
+                        OnExtracted(file, datfile != null);
+                        if (datfile == null) continue;
 
                         string unpackedPathFile = unpackPath + file.Substring(len);
-                        SaveFile(unpackedPathFile, datfile);
+                        SaveExtractFile(unpackedPathFile, datfile);
                     }
                     return true;
                 }
@@ -205,6 +252,15 @@ namespace DATLib
             return new Info();
         }
 
+        public static DAT GetDat(string datFile)
+        {
+            foreach (DAT dat in openDat)
+            {
+                if (dat.DatFileName == datFile) return dat;
+            }
+            return null;
+        }
+
         public static void CloseDatFile(string datFile)
         {
             foreach (DAT dat in openDat)
@@ -223,13 +279,75 @@ namespace DATLib
             openDat.Clear();
         }
 
+        #if SaveBuild
+
+        // Преименовывает пути к файлам (без сохранения в dat)
+        public static void RenameFolder(string datFile, string oldFolder, string newFolder)
+        {
+            foreach (DAT dat in openDat)
+            {
+                if (dat.DatFileName == datFile) {
+                    int stopLen = oldFolder.Length;
+                    foreach (var file in dat.FileList)
+                    {
+                        int i = file.Path.IndexOf(oldFolder);
+                        if (i != -1 && i < stopLen) {
+                            file.FilePath = newFolder + file.FilePath.Substring(stopLen);
+                            file.Path = newFolder + file.Path.Substring(stopLen);
+                            file.FileNameSize = file.FilePath.Length;
+                        }
+                    }
+                }
+            }
+        }
+
+        public static bool SaveDAT(string datFile)
+        {
+            foreach (DAT dat in openDat)
+            {
+                if (dat.DatFileName == datFile) {
+                    if (dat.IsFallout2Type)
+                        DATWriter.FO2_BuildDat(dat);
+                    else
+                        DATWriter.FO1_BuildDat(dat);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static bool AppendFilesDAT(string datFile)
+        {
+            foreach (DAT dat in openDat)
+            {
+                if (dat.DatFileName == datFile) {
+                    DATWriter.WriteAppendFilesDat(dat);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static bool SaveDirectoryStructure(string datFile)
+        {
+            foreach (DAT dat in openDat)
+            {
+                if (dat.DatFileName == datFile) {
+                    DATWriter.WriteDirTree(dat);
+                    return true;
+                }
+            }
+            return false;
+        }
+        #endif
+
         #region Event
         public static event ExtractEvent ExtractUpdate;
 
-        public static void OnExtracted(string file)
+        public static void OnExtracted(string file, bool result)
         {
             if (ExtractUpdate != null) {
-                ExtractUpdate(new ExtractEventArgs(file));
+                ExtractUpdate(new ExtractEventArgs(file, result));
             }
         }
         #endregion

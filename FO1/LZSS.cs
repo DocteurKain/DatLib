@@ -11,7 +11,7 @@ namespace DATLib.FO1
     internal class LZSS
     {
         int uncompressedSize;
-        BinaryBigEndian stream;
+        RBinaryBigEndian stream;
 
         readonly short DICT_SIZE = 4096;
         readonly short MIN_MATCH = 3;
@@ -23,9 +23,9 @@ namespace DATLib.FO1
         private short NR;     // bytes read from last block header
         private short DO = 0; // dictionary offset - for reading
         private short DI;     // dictionary index - for writing
-        private int OI = 0;   // output index, used for writing to the output array. 
+        private int OI = 0;   // output index, used for writing to the output array.
 
-        public LZSS(BinaryBigEndian stream, int uncompressedSize)
+        public LZSS(RBinaryBigEndian stream, int uncompressedSize)
         {
             this.uncompressedSize = uncompressedSize;
             this.stream = stream;
@@ -84,7 +84,7 @@ namespace DATLib.FO1
             NR = 0; // The amount of bytes we have read in the current block so far
             if (N < 0) { // Uncompressed / literal block
                 WriteBytes(ReadBytes(N * -1)); // We just read N bytes and write to the output buffer. Dictionary is untouched.
-            } else { // N > 0            
+            } else { // N > 0
                 ClearDict();
                 // @Flag
                 while (true)
@@ -141,6 +141,13 @@ namespace DATLib.FO1
                 ReadBlock(N);
             }
             return output;
-        }    
+        }
+
+        //public byte[] Compress()
+        //{
+        //    output = new byte[uncompressedSize];
+        //    dictionary = new byte[DICT_SIZE];
+        //    return output;
+        //}
     }
 }
