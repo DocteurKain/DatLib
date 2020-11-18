@@ -339,6 +339,24 @@ namespace DATLib
             }
             return false;
         }
+
+        public static event RemoveFileEvent RemoveFile;
+        public static event WriteFileEvent SavingFile;
+
+        public static void OnRemove(string file)
+        {
+            if (RemoveFile != null) {
+                RemoveFile(new FileEventArgs(file));
+            }
+        }
+
+        public static void OnWrite(string file)
+        {
+            if (SavingFile != null) {
+                SavingFile(new FileEventArgs(file));
+            }
+        }
+
         #endif
 
         #region Event

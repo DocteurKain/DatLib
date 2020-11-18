@@ -4,26 +4,42 @@ using System.IO;
 namespace DATLib
 {
     #if SaveBuild
+
+    public delegate void WriteFileEvent(FileEventArgs e);
+    public delegate void RemoveFileEvent(FileEventArgs e);
+
+    public class FileEventArgs
+    {
+        protected string file;
+
+        public string File { get { return file; } }
+
+        public FileEventArgs(string file)
+        {
+            this.file = file;
+        }
+    }
+
     internal static class DATWriter
     {
         #region Fallout 1 dat format
-        
+
         private static SortedDictionary<string, List<DATFile>> BuildDict(DAT dat)
         {
             SortedDictionary<string, List<DATFile>> data = new SortedDictionary<string, List<DATFile>>();
-            
+
             foreach (var file in dat.FileList)
             {
                 if (file.IsDeleted) continue;
-                
+
                 string dir = file.Path;
-                
+
                 if (!data.ContainsKey(dir)) data.Add(dir, new List<DATFile>());
                 data[dir].Add(file);
             }
             return data;
         }
-        
+
         private static void UpdateFileData(SortedDictionary<string, List<DATFile>> data, WBinaryBigEndian bw)
         {
             foreach (var files in data.Values)
@@ -34,7 +50,7 @@ namespace DATLib
                 {
                     bw.BaseStream.Position += file.FileName.Length + 1;
                     bw.WriteInt32BE((file.Compression) ? 0x40 : 0x20);
-                    bw.WriteInt32BE(file.Offset);
+                    bw.WriteUInt32BE(file.Offset);
                     bw.WriteInt32BE(file.UnpackedSize);
                     bw.WriteInt32BE(file.PackedSize);
                 }
@@ -81,37 +97,40 @@ namespace DATLib
             }
 
             // key offset => value index
-            List<KeyValuePair<int, int>> list = new List<KeyValuePair<int, int>>(); 
+            List<KeyValuePair<uint, int>> list = new List<KeyValuePair<uint, int>>();
             for (int i = 0; i < dat.FileList.Count; i++)
             {
-                if (!dat.FileList[i].IsDeleted) list.Add(new KeyValuePair<int, int>(dat.FileList[i].Offset, i));
+                if (!dat.FileList[i].IsDeleted) list.Add(new KeyValuePair<uint, int>(dat.FileList[i].Offset, i));
             }
             // сортируем по значению offset
             list.Sort((x, y) => x.Key.CompareTo(y.Key));
-            
+
             bool hasVirtual = false;
 
             // Copy and write files content from source dat
             foreach (var item in list)
             {
                 int i = item.Value;
-   
+
                 if (dat.FileList[i].IsVirtual) {
                     hasVirtual = true;
                     continue;
                 }
+                DATManage.OnWrite(dat.FileList[i].FilePath);
 
-                int offset = (int)bw.BaseStream.Position;
+                uint offset = (uint)bw.BaseStream.Position;
                 bw.Write(dat.FileList[i].GetDirectFileData());
                 dat.FileList[i].Offset = offset;
             }
 
-            // Write virtual files content to save dat
+            // Write virtual files content to saving dat
             if (hasVirtual) {
                 for (int i = 0; i < dat.FileList.Count; i++)
                 {
                     if (dat.FileList[i].IsVirtual) {
-                        dat.FileList[i].Offset = (int)bw.BaseStream.Position;
+                        DATManage.OnWrite(dat.FileList[i].FilePath);
+
+                        dat.FileList[i].Offset = (uint)bw.BaseStream.Position;
                         bw.Write(dat.FileList[i].GetCompressedData(), 0, dat.FileList[i].PackedSize);
                     }
                 }
@@ -120,9 +139,9 @@ namespace DATLib
             UpdateFileData(data, bw);
 
             bw.Flush();
-            bw.Dispose();
+            bw.Close();
             dat.br.Close();
-            
+
             File.Delete(dat.DatFileName);
             File.Move(dat.DatFileName + ".tmp", dat.DatFileName);
 
@@ -130,15 +149,15 @@ namespace DATLib
             dat.br = br;
             for (int i = 0; i < dat.FileList.Count; i++) dat.FileList[i].br = br;
         }
-        
+
         #endregion
 
         #region Fallout 2 dat format
 
         private static void WriteDirTreeSub(DAT dat, BinaryWriter bw)
         {
-            int startDirTreeAddr = (int)bw.BaseStream.Position;
-            
+            uint startDirTreeAddr = (uint)bw.BaseStream.Position;
+
             // Write DirTree
             for (int i = 0; i < dat.FilesTotal; i++) {
                 bw.Write(dat.FileList[i].FileNameSize);
@@ -149,17 +168,35 @@ namespace DATLib
                 bw.Write(dat.FileList[i].Offset);
             }
             // TreeSize
-            dat.TreeSize = (int)bw.BaseStream.Position - startDirTreeAddr + 4;
+            dat.TreeSize = (int)((uint)bw.BaseStream.Position - startDirTreeAddr + 4);
             bw.Write(dat.TreeSize);
+
             // DatSize
-            int datSize = (int)bw.BaseStream.Position + 4;
+            uint datSize = (uint)bw.BaseStream.Position + 4;
             bw.Write(datSize);
 
-            if (dat.FileSizeFromDat > datSize) bw.BaseStream.SetLength(datSize);
+            if (dat.FileSizeFromDat > datSize && datSize != bw.BaseStream.Length) bw.BaseStream.SetLength(datSize); // truncate
+            bw.Flush();
 
             dat.FileSizeFromDat = datSize;
         }
-        
+
+        private static void WriteAppendFilesData(DAT dat, BinaryWriter bw)
+        {
+            foreach (var file in dat.FileList)
+            {
+                if (!file.IsVirtual) continue;
+
+                DATManage.OnWrite(file.FilePath);
+
+                file.Offset = (uint)bw.BaseStream.Position;
+
+                bw.Write(file.GetCompressedData(), 0, file.PackedSize);
+                file.Compression = file.PackedSize != file.UnpackedSize;
+                file.br = dat.br;
+            }
+        }
+
         public static void WriteDirTree(DAT dat)
         {
             BinaryWriter bw = new BinaryWriter(dat.br.BaseStream);
@@ -175,17 +212,8 @@ namespace DATLib
 
             bw.BaseStream.Seek(-(dat.TreeSize), SeekOrigin.End); // позиция FilesTotal
 
-            foreach (var file in dat.FileList)
-            {
-                if (!file.IsVirtual) continue;
-
-                file.Offset = (int)bw.BaseStream.Position;
-
-                bw.Write(file.GetCompressedData(), 0, file.PackedSize);
-                file.Compression = file.PackedSize != file.UnpackedSize;
-                file.br = dat.br;
-            }
-            bw.Write((int)dat.FilesTotal);
+            WriteAppendFilesData(dat, bw);
+            bw.Write(dat.FilesTotal);
 
             WriteDirTreeSub(dat, bw);
         }
@@ -193,37 +221,39 @@ namespace DATLib
         // Create new dat
         public static void FO2_BuildDat(DAT dat)
         {
-            BinaryWriter bw = new BinaryWriter(File.Open(dat.DatFileName + ".tmp", FileMode.Create));
+            BinaryWriter bw = new BinaryWriter(File.Open(dat.DatFileName + ".tmp", FileMode.Create, FileAccess.Write));
 
-            int i = 0;
-            while (i < dat.FilesTotal) // Write DataBlock
+            // Write DataBlock
+            for (int i = 0; i < dat.FileList.Count; i++)
             {
-                dat.FileList[i].Offset = (int)bw.BaseStream.Position;
-                bw.Write(dat.FileList[i].GetCompressedData(), 0, dat.FileList[i].PackedSize);
-                i++;
+                if (dat.FileList[i].IsVirtual) continue;
+
+                if (!dat.FileList[i].IsDeleted) {
+                    DATManage.OnWrite(dat.FileList[i].FilePath);
+
+                    uint offset = (uint)bw.BaseStream.Position;
+
+                    bw.Write(dat.FileList[i].GetDirectFileData());
+                    dat.FileList[i].Offset = offset;
+                } else {
+                    dat.FileList.RemoveAt(i--); // remove deleted file from list
+                }
             }
-            bw.Write((int)dat.FilesTotal);
+            WriteAppendFilesData(dat, bw); // write virtual files data
 
-            i = 0;
-            int treeSize = (int)bw.BaseStream.Position;
+            bw.Write(dat.FilesTotal);
 
-            while (i < dat.FilesTotal) // Write DirTree
-            {
-                bw.Write((int)dat.FileList[i].FileNameSize);
-                bw.Write(dat.FileList[i].FilePath.ToCharArray(0, dat.FileList[i].FilePath.Length));
-                bw.Write(dat.FileList[i].Compression);
-                bw.Write(dat.FileList[i].UnpackedSize);
-                bw.Write(dat.FileList[i].PackedSize);
-                bw.Write(dat.FileList[i].Offset);
-                i++;
-            }
-            bw.Write((int)(bw.BaseStream.Position - treeSize) + 4);
-            bw.Write((int)bw.BaseStream.Position + 4);
+            WriteDirTreeSub(dat, bw);
 
+            bw.Close();
             dat.br.Close();
-            File.Delete(dat.DatFileName);
 
-            dat.br = new BinaryReader(bw.BaseStream);
+            File.Delete(dat.DatFileName);
+            File.Move(dat.DatFileName + ".tmp", dat.DatFileName);
+
+            BinaryReader br = new BinaryReader(File.Open(dat.DatFileName, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite));
+            dat.br = br;
+            for (int i = 0; i < dat.FileList.Count; i++) dat.FileList[i].br = br;
         }
 
         #endregion

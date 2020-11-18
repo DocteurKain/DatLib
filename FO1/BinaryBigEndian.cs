@@ -52,5 +52,12 @@ namespace DATLib
             Array.Reverse(data);
             base.Write(data);
         }
+
+        public void WriteUInt32BE(uint value)
+        {
+            byte[] data = BitConverter.GetBytes(value);
+            Array.Reverse(data);
+            base.Write(data);
+        }
     }
 }

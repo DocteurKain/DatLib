@@ -16,7 +16,7 @@ namespace DATLib
         internal bool Compression  { get; set; }
         internal int  UnpackedSize { get; set; }
         internal int  PackedSize   { get; set; }
-        internal int  Offset       { get; set; }
+        internal uint Offset       { get; set; }
         internal int  FileNameSize { get; set; }
 
         internal string ErrorMsg  { get; set; }

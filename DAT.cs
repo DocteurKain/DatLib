@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+
 using DATLib.FO1;
 
 namespace DATLib
@@ -16,9 +17,9 @@ namespace DATLib
         internal List<DATFile> FileList { get; set; }
 
         // only for Fallout 2 DAT
-        internal int FileSizeFromDat { get; set; }
-        internal int TreeSize { get; set; }
-        internal int FilesTotal { get; set; }
+        internal uint FileSizeFromDat { get; set; }
+        internal int  TreeSize { get; set; }
+        internal int  FilesTotal { get; set; }
 
         // only for Fallout 1 DAT
         internal int DirCount { get; set; }
@@ -81,25 +82,32 @@ namespace DATLib
 
         public bool RemoveFile(List<string> filesList)
         {
+            if (IsFallout2Type) FilesTotal -= filesList.Count;
+
             bool realDeleted = false;
-            foreach (var file in filesList)
+
+            for (int i = 0; i < FileList.Count; i++)
             {
-                for (int i = 0; i < FileList.Count; i++)
+                if (FileList[i].IsDeleted) continue;
+
+                for (int j = 0; j < filesList.Count; j++)
                 {
-                    if (FileList[i].IsVirtual) {
-                        FileList.RemoveAt(i--);
-                        break;
-                    } else if (FileList[i].FilePath == file) {
-                        FileList[i].IsDeleted = true;
-                        realDeleted = true;
+                    if (FileList[i].FilePath == filesList[j]) {
+                        if (FileList[i].IsVirtual) {
+                            FileList.RemoveAt(i--);
+                        } else {
+                            FileList[i].IsDeleted = true;
+                            realDeleted = true;
+                        }
+                        DATManage.OnRemove(filesList[j]);
+                        filesList.RemoveAt(j);
                         break;
                     }
                 }
+                if (filesList.Count == 0) break;
             }
-            if (!IsFallout2Type) FilesTotal -= filesList.Count;
             return realDeleted;
         }
-
         #endif
     }
 }

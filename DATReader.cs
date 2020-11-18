@@ -50,7 +50,7 @@ namespace DATLib
             dat.br = br;
             br.BaseStream.Seek(-8, SeekOrigin.End);
             dat.TreeSize = br.ReadInt32();
-            dat.FileSizeFromDat = br.ReadInt32();
+            dat.FileSizeFromDat = br.ReadUInt32();
 
             // Check Dat version
             if (br.BaseStream.Length != dat.FileSizeFromDat)
@@ -93,9 +93,11 @@ namespace DATLib
                     file.br = br;
 
                     file.FileNameSize = br.ReadInt32();
+
                     char[] namebuf = new Char[file.FileNameSize];
                     br.Read(namebuf, 0, (int)file.FileNameSize);
                     string pathFile = new String(namebuf, 0, namebuf.Length);
+
                     file.FileName = Path.GetFileName(pathFile);
                     file.FilePath = pathFile.ToLower();
                     file.Path = Path.GetDirectoryName(pathFile);
@@ -103,7 +105,7 @@ namespace DATLib
                     file.Compression = (br.ReadByte() == 0x1);
                     file.UnpackedSize = br.ReadInt32();
                     file.PackedSize = br.ReadInt32();
-                    file.Offset = br.ReadInt32();
+                    file.Offset = br.ReadUInt32();
 
                     if (!file.Compression && (file.UnpackedSize != file.PackedSize)) file.Compression = true;
 
@@ -129,7 +131,7 @@ namespace DATLib
                         file.br = br;
                         file.FileName = ReadString(br);
                         file.Compression = (((RBinaryBigEndian)br).ReadUInt() == 0x40000000);
-                        file.Offset = br.ReadInt32();
+                        file.Offset = br.ReadUInt32();
                         file.UnpackedSize = br.ReadInt32();
                         file.PackedSize = br.ReadInt32();
                         file.Path = directories[i];
