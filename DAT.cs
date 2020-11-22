@@ -26,7 +26,7 @@ namespace DATLib
 
         public bool IsFallout2Type
         {
-            get { return DirCount == 0; }
+            get { return DirCount == -1; }
         }
 
         internal void Close()
@@ -63,24 +63,25 @@ namespace DATLib
 
         #if SaveBuild
 
-        public void AddFile(string filename, FileInfo virtualfile)
+        public void AddFile(string filename, FileInfo virtualFile)
         {
-            DATFile file = new DATFile();
-            file.Path = virtualfile.pathTree;
-            file.FileName = virtualfile.name;
-            file.FilePath = virtualfile.pathTree + virtualfile.name;
+            DATFile file = (IsFallout2Type) ? new DATFile() : new DAT1File();
+            file.Path = virtualFile.pathTree.TrimEnd('\\');
+            file.FileName = virtualFile.name;
+            file.FilePath = (virtualFile.pathTree + virtualFile.name);
+
             file.FileNameSize = System.Text.ASCIIEncoding.ASCII.GetByteCount(file.FilePath);
 
             file.RealFile = filename;
 
-            file.UnpackedSize = virtualfile.info.Size;
+            file.UnpackedSize = virtualFile.info.Size;
             file.PackedSize = -1;
             file.Compression = false;
             FileList.Add(file);
             FilesTotal++;
         }
 
-        public bool RemoveFile(List<string> filesList)
+        public bool RemoveFiles(List<string> filesList)
         {
             if (IsFallout2Type) FilesTotal -= filesList.Count;
 
@@ -99,7 +100,7 @@ namespace DATLib
                             FileList[i].IsDeleted = true;
                             realDeleted = true;
                         }
-                        DATManage.OnRemove(filesList[j]);
+                        OnRemove(filesList[j]);
                         filesList.RemoveAt(j);
                         break;
                     }
@@ -108,6 +109,34 @@ namespace DATLib
             }
             return realDeleted;
         }
+
+        public static event RemoveFileEvent RemoveFile;
+        public static event WriteFileEvent  SavingFile;
+
+        internal static void OnRemove(string file)
+        {
+            if (RemoveFile != null) {
+                RemoveFile(new FileEventArgs(file));
+            }
+        }
+
+        internal static void OnWrite(string file)
+        {
+            if (SavingFile != null) {
+                SavingFile(new FileEventArgs(file));
+            }
+        }
         #endif
+
+        #region Event
+        public static event ExtractFileEvent ExtractUpdate;
+
+        internal static void OnExtracted(string file, bool result)
+        {
+            if (ExtractUpdate != null) {
+                ExtractUpdate(new ExtractEventArgs(file, result));
+            }
+        }
+        #endregion
     }
 }

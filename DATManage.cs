@@ -80,7 +80,7 @@ namespace DATLib
                         int n = datfile.FilePath.LastIndexOf('\\') + 1;
                         string filePath = datfile.FilePath.Remove(n) + datfile.FileName;
 
-                        OnExtracted(filePath, true);
+                        DAT.OnExtracted(filePath, true);
 
                         SaveExtractFile(unpackPath + filePath, datfile);
                     }
@@ -145,7 +145,7 @@ namespace DATLib
                     {
                         DATFile datfile = DATReader.GetFile(dat, file);
 
-                        OnExtracted(file, datfile != null);
+                        DAT.OnExtracted(file, datfile != null);
                         if (datfile == null) continue;
 
                         SaveExtractFile(unpackPath + file, datfile);
@@ -178,7 +178,7 @@ namespace DATLib
                     {
                         DATFile datfile = DATReader.GetFile(dat, file);
 
-                        OnExtracted(file, datfile != null);
+                        DAT.OnExtracted(file, datfile != null);
                         if (datfile == null) continue;
 
                         string unpackedPathFile = unpackPath + file.Substring(len);
@@ -321,7 +321,11 @@ namespace DATLib
             foreach (DAT dat in openDat)
             {
                 if (dat.DatFileName == datFile) {
-                    DATWriter.WriteAppendFilesDat(dat);
+                    if (dat.IsFallout2Type) {
+                        DATWriter.WriteAppendFilesDat(dat);
+                    } else {
+                        DATWriter.FO1_BuildDat(dat);
+                    }
                     return true;
                 }
             }
@@ -333,41 +337,17 @@ namespace DATLib
             foreach (DAT dat in openDat)
             {
                 if (dat.DatFileName == datFile) {
-                    DATWriter.WriteDirTree(dat);
+                    if (dat.IsFallout2Type) {
+                        DATWriter.WriteDirTree(dat);
+                    } else {
+                        DATWriter.FO1_BuildDat(dat);
+                    }
                     return true;
                 }
             }
             return false;
         }
 
-        public static event RemoveFileEvent RemoveFile;
-        public static event WriteFileEvent SavingFile;
-
-        public static void OnRemove(string file)
-        {
-            if (RemoveFile != null) {
-                RemoveFile(new FileEventArgs(file));
-            }
-        }
-
-        public static void OnWrite(string file)
-        {
-            if (SavingFile != null) {
-                SavingFile(new FileEventArgs(file));
-            }
-        }
-
         #endif
-
-        #region Event
-        public static event ExtractEvent ExtractUpdate;
-
-        public static void OnExtracted(string file, bool result)
-        {
-            if (ExtractUpdate != null) {
-                ExtractUpdate(new ExtractEventArgs(file, result));
-            }
-        }
-        #endregion
     }
 }

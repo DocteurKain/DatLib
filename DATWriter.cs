@@ -32,11 +32,13 @@ namespace DATLib
             {
                 if (file.IsDeleted) continue;
 
-                string dir = file.Path;
+                string dir = file.Path.ToUpperInvariant();
 
                 if (!data.ContainsKey(dir)) data.Add(dir, new List<DATFile>());
                 data[dir].Add(file);
             }
+            dat.DirCount = data.Count;
+
             return data;
         }
 
@@ -57,7 +59,7 @@ namespace DATLib
             }
         }
 
-        public static void FO1_BuildDat(DAT dat)
+        internal static void FO1_BuildDat(DAT dat)
         {
             SortedDictionary<string, List<DATFile>> data = BuildDict(dat);
 
@@ -73,7 +75,7 @@ namespace DATLib
             foreach (var dir in data.Keys)
             {
                 bw.Write((byte)dir.Length);
-                bw.Write(dir.ToCharArray());
+                bw.Write(dir.ToCharArray()); // write in upper case
             }
 
             int startFileDataAddr = (int)bw.BaseStream.Position;
@@ -90,6 +92,8 @@ namespace DATLib
 
                 foreach (var file in files)
                 {
+                    if (file.IsDeleted) continue;
+
                     bw.Write((byte)file.FileName.Length);
                     bw.Write(file.FileName.ToCharArray());
                     bw.BaseStream.Position += 16;
@@ -116,7 +120,7 @@ namespace DATLib
                     hasVirtual = true;
                     continue;
                 }
-                DATManage.OnWrite(dat.FileList[i].FilePath);
+                if (i % 5 == 0) DAT.OnWrite(dat.FileList[i].FilePath);
 
                 uint offset = (uint)bw.BaseStream.Position;
                 bw.Write(dat.FileList[i].GetDirectFileData());
@@ -128,7 +132,7 @@ namespace DATLib
                 for (int i = 0; i < dat.FileList.Count; i++)
                 {
                     if (dat.FileList[i].IsVirtual) {
-                        DATManage.OnWrite(dat.FileList[i].FilePath);
+                        DAT.OnWrite(dat.FileList[i].FilePath);
 
                         dat.FileList[i].Offset = (uint)bw.BaseStream.Position;
                         bw.Write(dat.FileList[i].GetCompressedData(), 0, dat.FileList[i].PackedSize);
@@ -161,7 +165,7 @@ namespace DATLib
             // Write DirTree
             for (int i = 0; i < dat.FilesTotal; i++) {
                 bw.Write(dat.FileList[i].FileNameSize);
-                bw.Write(dat.FileList[i].FilePath.ToCharArray());
+                bw.Write(dat.FileList[i].FilePath.ToCharArray()); // write in lower case
                 bw.Write(dat.FileList[i].Compression);
                 bw.Write(dat.FileList[i].UnpackedSize);
                 bw.Write(dat.FileList[i].PackedSize);
@@ -187,7 +191,7 @@ namespace DATLib
             {
                 if (!file.IsVirtual) continue;
 
-                DATManage.OnWrite(file.FilePath);
+                DAT.OnWrite(file.FilePath);
 
                 file.Offset = (uint)bw.BaseStream.Position;
 
@@ -197,7 +201,7 @@ namespace DATLib
             }
         }
 
-        public static void WriteDirTree(DAT dat)
+        internal static void WriteDirTree(DAT dat)
         {
             BinaryWriter bw = new BinaryWriter(dat.br.BaseStream);
 
@@ -206,7 +210,7 @@ namespace DATLib
             WriteDirTreeSub(dat, bw);
         }
 
-        public static void WriteAppendFilesDat(DAT dat)
+        internal static void WriteAppendFilesDat(DAT dat)
         {
             BinaryWriter bw = new BinaryWriter(dat.br.BaseStream);
 
@@ -219,7 +223,7 @@ namespace DATLib
         }
 
         // Create new dat
-        public static void FO2_BuildDat(DAT dat)
+        internal static void FO2_BuildDat(DAT dat)
         {
             BinaryWriter bw = new BinaryWriter(File.Open(dat.DatFileName + ".tmp", FileMode.Create, FileAccess.Write));
 
@@ -229,7 +233,7 @@ namespace DATLib
                 if (dat.FileList[i].IsVirtual) continue;
 
                 if (!dat.FileList[i].IsDeleted) {
-                    DATManage.OnWrite(dat.FileList[i].FilePath);
+                    if (i % 5 == 0) DAT.OnWrite(dat.FileList[i].FilePath);
 
                     uint offset = (uint)bw.BaseStream.Position;
 

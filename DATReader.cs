@@ -37,6 +37,8 @@ namespace DATLib
 
             DAT dat = new DAT();
             dat.DatFileName = filename;
+            dat.DirCount = -1;
+
             BinaryReader br = null;
             try
             {

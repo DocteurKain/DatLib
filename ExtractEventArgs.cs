@@ -5,7 +5,7 @@ using System.Text;
 
 namespace DATLib
 {
-    public delegate void ExtractEvent(ExtractEventArgs e);
+    public delegate void ExtractFileEvent(ExtractEventArgs e);
 
     public class ExtractEventArgs
     {
