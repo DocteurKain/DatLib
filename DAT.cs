@@ -53,6 +53,11 @@ namespace DATLib
             return Files;
         }
 
+        /// <summary>
+        /// Возвращает файл находящийся в DAT по его пути
+        /// </summary>
+        /// <param name="fileName">Путь и имя файла</param>
+        /// <returns></returns>
         public DATFile GetFileByName(string fileName)
         {
             foreach (DATFile file in FileList) {
@@ -63,16 +68,17 @@ namespace DATLib
 
         #if SaveBuild
 
-        public void AddFile(string filename, FileInfo virtualFile)
+        public void AddFile(string realFile, FileInfo virtualFile)
         {
             DATFile file = (IsFallout2Type) ? new DATFile() : new DAT1File();
-            file.Path = virtualFile.pathTree.TrimEnd('\\');
+
+            file.Path = virtualFile.pathTree;
             file.FileName = virtualFile.name;
-            file.FilePath = (virtualFile.pathTree + virtualFile.name);
+            file.FilePath = (virtualFile.pathTree + virtualFile.name).ToLowerInvariant();
 
             file.FileNameSize = System.Text.ASCIIEncoding.ASCII.GetByteCount(file.FilePath);
 
-            file.RealFile = filename;
+            file.RealFile = realFile;
 
             file.UnpackedSize = virtualFile.info.Size;
             file.PackedSize = -1;
@@ -108,6 +114,11 @@ namespace DATLib
                 if (filesList.Count == 0) break;
             }
             return realDeleted;
+        }
+
+        public void RenameFile(string filePath, string newName)
+        {
+            GetFileByName(filePath).Rename(newName);
         }
 
         public static event RemoveFileEvent RemoveFile;

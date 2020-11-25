@@ -9,15 +9,30 @@ namespace DATLib
 
         internal BinaryReader br;
 
-        internal String FilePath  { get; set; } // path and name in lower case
-        internal String FileName  { get; set; } // file name with case letters
-        internal String Path      { get; set; } // only path to file
+        /// <summary>
+        /// Path and name in lower case
+        /// </summary>
+        internal String FilePath  { get; set; }
+
+        /// <summary>
+        /// File name with case letters
+        /// </summary>
+        internal String FileName  { get; set; }
+
+        /// <summary>
+        /// Only path to file
+        /// </summary>
+        internal String Path      { get; set; }
+
+        /// <summary>
+        /// Length of FilePath
+        /// </summary>
+        internal int  FileNameSize { get; set; }
 
         internal bool Compression  { get; set; }
         internal int  UnpackedSize { get; set; }
         internal int  PackedSize   { get; set; }
         internal uint Offset       { get; set; }
-        internal int  FileNameSize { get; set; }
 
         internal string ErrorMsg  { get; set; }
 
@@ -27,6 +42,14 @@ namespace DATLib
 
         internal bool IsVirtual { get { return PackedSize == -1; } }   // True - файл расположен вне DAT
         internal bool IsDeleted { get;  set; }                         // True - файл будет удален из DAT при сохранении
+
+        internal void Rename(string newName)
+        {
+            int l = FilePath.Length;
+            FilePath = FilePath.Remove(l - FileName.Length) + newName.ToLowerInvariant();
+            FileNameSize = FilePath.Length;
+            FileName = newName;
+        }
 
         private byte[] compressStream(FileStream file)
         {

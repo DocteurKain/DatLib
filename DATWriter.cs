@@ -32,7 +32,7 @@ namespace DATLib
             {
                 if (file.IsDeleted) continue;
 
-                string dir = file.Path.ToUpperInvariant();
+                string dir = file.Path.TrimEnd('\\').ToUpperInvariant();
 
                 if (!data.ContainsKey(dir)) data.Add(dir, new List<DATFile>());
                 data[dir].Add(file);
@@ -165,7 +165,7 @@ namespace DATLib
             // Write DirTree
             for (int i = 0; i < dat.FilesTotal; i++) {
                 bw.Write(dat.FileList[i].FileNameSize);
-                bw.Write(dat.FileList[i].FilePath.ToCharArray()); // write in lower case
+                bw.Write((dat.FileList[i].Path + dat.FileList[i].FileName).ToCharArray());
                 bw.Write(dat.FileList[i].Compression);
                 bw.Write(dat.FileList[i].UnpackedSize);
                 bw.Write(dat.FileList[i].PackedSize);

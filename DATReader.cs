@@ -27,7 +27,7 @@ namespace DATLib
     internal static class DATReader
     {
         // Based on code by Dims
-        public static DAT ReadDat(string filename, out DatReaderError error)
+        internal static DAT ReadDat(string filename, out DatReaderError error)
         {
             if (String.IsNullOrEmpty(filename))
             {
@@ -82,15 +82,15 @@ namespace DATLib
             return dat;
         }
 
-        internal static List<DATFile> FindFiles(DAT dat)
+        internal static List<DATFile> ReadFilesData(DAT dat)
         {
             List<DATFile> DatFiles = new List<DATFile>();
             BinaryReader br = dat.br;
 
             if (dat.IsFallout2Type) {
-                uint FileIndex = 0;
+                uint fileIndex = 0;
                 br.BaseStream.Seek(-(dat.TreeSize + 4), SeekOrigin.End);
-                while (FileIndex < dat.FilesTotal) {
+                while (fileIndex < dat.FilesTotal) {
                     DATFile file = new DATFile();
                     file.br = br;
 
@@ -101,8 +101,8 @@ namespace DATLib
                     string pathFile = new String(namebuf, 0, namebuf.Length);
 
                     file.FileName = Path.GetFileName(pathFile);
-                    file.FilePath = pathFile.ToLower();
-                    file.Path = Path.GetDirectoryName(pathFile);
+                    file.FilePath = pathFile.ToLowerInvariant();
+                    file.Path = pathFile.Remove(pathFile.LastIndexOf('\\') + 1);
 
                     file.Compression = (br.ReadByte() == 0x1);
                     file.UnpackedSize = br.ReadInt32();
@@ -112,14 +112,14 @@ namespace DATLib
                     if (!file.Compression && (file.UnpackedSize != file.PackedSize)) file.Compression = true;
 
                     DatFiles.Add(file);
-                    FileIndex++;
+                    fileIndex++;
                 }
             } else {
                 // Implement FO1 dat support: https://falloutmods.fandom.com/wiki/DAT_file_format
                 List<string> directories = new List<string>();
                 for (var i = 0; i < dat.DirCount; i++)
                 {
-                    directories.Add(ReadString(br));
+                    directories.Add(ReadString(br) + '\\');
                 }
 
                 br = new RBinaryBigEndian(br.BaseStream);
@@ -137,7 +137,7 @@ namespace DATLib
                         file.UnpackedSize = br.ReadInt32();
                         file.PackedSize = br.ReadInt32();
                         file.Path = directories[i];
-                        file.FilePath = (directories[i] + '\\' + file.FileName).ToLower();
+                        file.FilePath = (directories[i] + file.FileName).ToLowerInvariant();
 
                         DatFiles.Add(file);
                     }
@@ -146,9 +146,15 @@ namespace DATLib
             return DatFiles;
         }
 
+        /// <summary>
+        /// Возвращает файл находящийся в DAT по его пути, поиск осуществляется без чувствительности к регистру
+        /// </summary>
+        /// <param name="dat"></param>
+        /// <param name="filename"></param>
+        /// <returns></returns>
         internal static DATFile GetFile(DAT dat, string filename)
         {
-            filename = filename.ToLower();
+            filename = filename.ToLowerInvariant();
 
             foreach (DATFile file in dat.FileList)
             {

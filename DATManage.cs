@@ -15,8 +15,8 @@ namespace DATLib
 
     public struct FileInfo
     {
-        public string pathTree;
-        public string name;
+        public string pathTree; // in case, в конце содержит разделитель пути '\'
+        public string name;     // in case
         public Info info;
     }
 
@@ -42,7 +42,7 @@ namespace DATLib
             DatReaderError err;
             DAT datData = DATReader.ReadDat(datFile, out err);
             if (datData != null) {
-                datData.FileList = DATReader.FindFiles(datData);
+                datData.FileList = DATReader.ReadFilesData(datData);
                 openDat.Add(datData);
             }
             eMessage = err.Message;
@@ -77,12 +77,8 @@ namespace DATLib
                     UnsetCheckFolder();
                     foreach (DATFile datfile in dat.FileList)
                     {
-                        int n = datfile.FilePath.LastIndexOf('\\') + 1;
-                        string filePath = datfile.FilePath.Remove(n) + datfile.FileName;
-
-                        DAT.OnExtracted(filePath, true);
-
-                        SaveExtractFile(unpackPath + filePath, datfile);
+                        DAT.OnExtracted(datfile.FilePath, true);
+                        SaveExtractFile(unpackPath + datfile.Path + datfile.FileName, datfile);
                     }
                     return true;
                 }
@@ -129,7 +125,7 @@ namespace DATLib
                 if (dat.DatFileName == datFile) {
                     UnsetCheckFolder();
                     DATFile datfile = DATReader.GetFile(dat, file);
-                    return (datfile != null) ? SaveExtractFile(unpackPath + file, datfile) : false;
+                    return (datfile != null) ? SaveExtractFile(unpackPath + datfile.Path + datfile.FileName, datfile) : false;
                 }
             }
             return false;
@@ -148,7 +144,7 @@ namespace DATLib
                         DAT.OnExtracted(file, datfile != null);
                         if (datfile == null) continue;
 
-                        SaveExtractFile(unpackPath + file, datfile);
+                        SaveExtractFile(unpackPath + datfile.Path + datfile.FileName, datfile);
                     }
                     return true;
                 }
@@ -172,7 +168,6 @@ namespace DATLib
                     UnsetCheckFolder();
 
                     int len = cutoffPath.Length;
-                    if (len > 0) len++;
 
                     foreach (var file in files)
                     {
@@ -181,7 +176,7 @@ namespace DATLib
                         DAT.OnExtracted(file, datfile != null);
                         if (datfile == null) continue;
 
-                        string unpackedPathFile = unpackPath + file.Substring(len);
+                        string unpackedPathFile = unpackPath + datfile.Path.Substring(len) + datfile.FileName;
                         SaveExtractFile(unpackedPathFile, datfile);
                     }
                     return true;
@@ -214,12 +209,13 @@ namespace DATLib
                     Dictionary<String, FileInfo> fileList = new Dictionary<String, FileInfo>();
                     foreach (var file in dat.FileList)
                     {
-                        FileInfo f = new FileInfo();
-                        f.name            = file.FileName;
-                        f.info.Size       = file.UnpackedSize;
-                        f.info.IsPacked   = file.Compression;
-                        f.info.PackedSize = file.PackedSize;
-                        fileList.Add(file.FilePath, f);
+                        FileInfo _file = new FileInfo();
+                        _file.name            = file.FileName;
+                        _file.info.Size       = file.UnpackedSize;
+                        _file.info.IsPacked   = file.Compression;
+                        _file.info.PackedSize = file.PackedSize;
+                        _file.pathTree        = file.Path;
+                        fileList.Add(file.FilePath, _file);
                     }
                     return fileList;
                 }
@@ -287,13 +283,13 @@ namespace DATLib
             foreach (DAT dat in openDat)
             {
                 if (dat.DatFileName == datFile) {
-                    int stopLen = oldFolder.Length;
+                    int stopLen = oldFolder.Length - 1;
+                    int last = oldFolder.LastIndexOf('\\', stopLen - 1) + 1;
                     foreach (var file in dat.FileList)
                     {
-                        int i = file.Path.IndexOf(oldFolder);
-                        if (i != -1 && i < stopLen) {
-                            file.FilePath = newFolder + file.FilePath.Substring(stopLen);
-                            file.Path = newFolder + file.Path.Substring(stopLen);
+                        if (file.FilePath.StartsWith(oldFolder)) {
+                            file.Path = file.Path.Remove(last) + newFolder + file.Path.Substring(stopLen);
+                            file.FilePath = (file.Path + file.FileName).ToLowerInvariant();
                             file.FileNameSize = file.FilePath.Length;
                         }
                     }
