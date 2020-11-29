@@ -57,7 +57,6 @@ namespace DATLib
         /// Возвращает файл находящийся в DAT по его пути
         /// </summary>
         /// <param name="fileName">Путь и имя файла</param>
-        /// <returns></returns>
         public DATFile GetFileByName(string fileName)
         {
             foreach (DATFile file in FileList) {
@@ -67,6 +66,20 @@ namespace DATLib
         }
 
         #if SaveBuild
+        public enum FalloutType { Fallout1 = 1, Fallout2 = 2 }
+
+        public int  AddedFiles { get; internal set; }
+
+        public DAT() {}
+
+        public DAT(string datFile, FalloutType type)
+        {
+            br = new BinaryReader(File.Open(datFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None));
+
+            DatFileName = datFile;
+            DirCount = (type == FalloutType.Fallout2) ? -1 : 0;
+            FileList = new List<DATFile>();
+        }
 
         public void AddFile(string realFile, FileInfo virtualFile)
         {
@@ -84,7 +97,9 @@ namespace DATLib
             file.PackedSize = -1;
             file.Compression = false;
             FileList.Add(file);
+
             FilesTotal++;
+            AddedFiles++;
         }
 
         public bool RemoveFiles(List<string> filesList)
@@ -102,6 +117,7 @@ namespace DATLib
                     if (FileList[i].FilePath == filesList[j]) {
                         if (FileList[i].IsVirtual) {
                             FileList.RemoveAt(i--);
+                            AddedFiles--;
                         } else {
                             FileList[i].IsDeleted = true;
                             realDeleted = true;

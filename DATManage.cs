@@ -277,6 +277,12 @@ namespace DATLib
 
         #if SaveBuild
 
+        public static void CreateDatFile(string datFile, DAT.FalloutType type)
+        {
+            DAT datData = new DAT(datFile, type);
+            openDat.Add(datData);
+        }
+
         // Преименовывает пути к файлам (без сохранения в dat)
         public static void RenameFolder(string datFile, string oldFolder, string newFolder)
         {

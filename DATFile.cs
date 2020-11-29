@@ -29,10 +29,10 @@ namespace DATLib
         /// </summary>
         internal int  FileNameSize { get; set; }
 
-        internal bool Compression  { get; set; }
-        internal int  UnpackedSize { get; set; }
-        internal int  PackedSize   { get; set; }
-        internal uint Offset       { get; set; }
+        internal bool   Compression  { get; set; }
+        internal Int32  UnpackedSize { get; set; }
+        internal Int32  PackedSize   { get; set; }
+        internal UInt32 Offset       { get; set; }
 
         internal string ErrorMsg  { get; set; }
 
@@ -79,10 +79,17 @@ namespace DATLib
             if (RealFile == null) return null;
 
             using (FileStream file = new FileStream(RealFile, FileMode.Open, FileAccess.Read)) {
-                byte[] compressed = compressStream(file);
-                PackedSize = compressed.Length;
+                byte[] data = compressStream(file);
+                if (UnpackedSize <= data.Length) { // bad compressed, the compressed file size is greater or equal to the uncompressed file
+                    PackedSize = UnpackedSize;
+                    file.Position = 0;
+                    file.Read(data, 0, UnpackedSize);
+                } else {
+                    PackedSize = data.Length;
+                    Compression = true;
+                }
                 RealFile = null;
-                return compressed;
+                return data;
             }
         }
 
