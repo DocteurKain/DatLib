@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace DATLib
@@ -122,7 +123,7 @@ namespace DATLib
                     hasVirtual = true;
                     continue;
                 }
-                if (!mod || i % 5 == 0) DAT.OnWrite(dat.FileList[i].FilePath);
+                if (!mod || dat.FileList[i].UnpackedSize > 10485760 || i % 5 == 0) DAT.OnWrite(dat.FileList[i].FilePath);
 
                 UInt32 offset = (UInt32)bw.BaseStream.Position;
                 bw.Write(dat.FileList[i].GetDirectFileData());
@@ -134,7 +135,7 @@ namespace DATLib
                 for (int i = 0; i < dat.FileList.Count; i++)
                 {
                     if (dat.FileList[i].IsVirtual) {
-                        DAT.OnWrite(dat.FileList[i].FilePath);
+                        if (!mod || dat.FileList[i].UnpackedSize > 1048576 || i % 5 == 0) DAT.OnWrite(dat.FileList[i].FilePath);
 
                         dat.FileList[i].Offset = (UInt32)bw.BaseStream.Position;
                         bw.Write(dat.FileList[i].GetCompressedData(), 0, dat.FileList[i].PackedSize);

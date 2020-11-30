@@ -100,19 +100,9 @@ namespace DATLib
                 if (dat.DatFileName == datFile) {
                     UnsetCheckFolder();
 
-                    //int len = datFolder.Length;
-                    //if (len > 0) len++;
+                    // TODO
 
-                    //foreach (DATFile datfile in dat.FileList)
-                    //{
-                    //    int n = datfile.FilePath.LastIndexOf('\\') + 1;
-                    //    string filePath = datfile.FilePath.Remove(n) + datfile.FileName;
-
-                    //    //OnExtracted(filePath);
-
-                    //    //SaveFile(unpackPath + filePath, datfile);
-                    //}
-                    //return true;
+                    return true;
                 }
             }
             return false;

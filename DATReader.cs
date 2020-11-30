@@ -49,6 +49,11 @@ namespace DATLib
                 error = new DatReaderError(DatError.IOError, io.Message);
                 return null;
             }
+            if (br.BaseStream.Length == 0) {
+                error = new DatReaderError(DatError.WrongSize, "Dat file size is zero.");
+                return null;
+            }
+
             dat.br = br;
             br.BaseStream.Seek(-8, SeekOrigin.End);
             dat.TreeSize = br.ReadInt32();
