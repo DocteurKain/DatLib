@@ -27,10 +27,10 @@ namespace DATLib
             if (base.RealFile == null) return null;
 
             using (FileStream file = new FileStream(base.RealFile, FileMode.Open, FileAccess.Read)) {
-                byte[] compressed = compressStream(file);
-                base.PackedSize = compressed.Length;
+                byte[] data = compressStream(file);
+                base.PackedSize = 0; //data.Length;
                 base.RealFile = null;
-                return compressed;
+                return data;
             }
         }
 

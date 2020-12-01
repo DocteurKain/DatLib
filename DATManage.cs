@@ -23,11 +23,11 @@ namespace DATLib
     public static class DATManage
     {
         static private List<DAT> openDat = new List<DAT>();
-        private static string lastCheckFolder = string.Empty;
+        private static string lastCheckFolder;
 
         private static void UnsetCheckFolder()
         {
-            lastCheckFolder = string.Empty;
+            lastCheckFolder = null;
         }
 
         public static bool OpenDatFile(string datFile, out string eMessage)
@@ -54,7 +54,7 @@ namespace DATLib
             byte[] data = datfile.GetFileData();
             if (data == null) return false;
 
-            if (lastCheckFolder != datfile.Path) {
+            if (lastCheckFolder == null || lastCheckFolder != datfile.Path) {
                 string path = Path.GetFullPath(Path.GetDirectoryName(filePath));
                 if (!Directory.Exists(path)) Directory.CreateDirectory(path);
                 lastCheckFolder = datfile.Path;

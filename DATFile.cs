@@ -38,7 +38,7 @@ namespace DATLib
 
         #if SaveBuild
 
-        internal String RealFile  { get; set; } // path to file on disc
+        internal String RealFile  { get; set; } // path to file on disk
 
         internal bool IsVirtual { get { return PackedSize == -1; } }   // True - файл расположен вне DAT
         internal bool IsDeleted { get;  set; }                         // True - файл будет удален из DAT при сохранении

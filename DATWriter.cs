@@ -31,9 +31,8 @@ namespace DATLib
 
             foreach (var file in dat.FileList)
             {
-                if (file.IsDeleted) continue;
-
                 string dir = file.Path.TrimEnd('\\').ToUpperInvariant();
+                if (dir == String.Empty) dir = ".";
 
                 if (!data.ContainsKey(dir)) data.Add(dir, new List<DATFile>());
                 data[dir].Add(file);
@@ -62,6 +61,20 @@ namespace DATLib
 
         internal static void FO1_BuildDat(DAT dat)
         {
+            bool hasVirtual = false;
+            int countFiles = dat.FileList.Count;
+
+            dat.FileList.Sort((a, b) => a.FilePath.CompareTo(b.FilePath)); // сортировка для движка
+
+            for (int i = 0; i < countFiles; i++)
+            {
+                if (dat.FileList[i].IsVirtual) hasVirtual = true;
+                if (!dat.FileList[i].IsDeleted) continue;
+
+                dat.FileList.RemoveAt(i--);
+                countFiles--;
+            }
+
             SortedDictionary<string, List<DATFile>> data = BuildDict(dat);
 
             WBinaryBigEndian bw = new WBinaryBigEndian(File.Open(dat.DatFileName + ".tmp", FileMode.Create, FileAccess.Write));
@@ -71,7 +84,7 @@ namespace DATLib
             bw.WriteInt32BE(dat.DirCount);
 
             // Unknown fields
-            bw.WriteInt32BE(dat.DirCount); // 10
+            bw.WriteInt32BE(dat.DirCount);
             bw.Write((UInt64)0); // 8-bytes
 
             // Write dirs
@@ -90,13 +103,11 @@ namespace DATLib
 
                 // Unknown fields
                 bw.WriteInt32BE(files.Count);
-                bw.WriteInt32BE(16); // 16
+                bw.WriteInt32BE(16); // 0x10
                 bw.WriteInt32BE(0);
 
                 foreach (var file in files)
                 {
-                    if (file.IsDeleted) continue;
-
                     bw.Write((Byte)file.FileName.Length);
                     bw.Write(file.FileName.ToCharArray());
                     bw.BaseStream.Position += 16;
@@ -105,24 +116,18 @@ namespace DATLib
 
             // key offset => value index
             List<KeyValuePair<UInt32, int>> list = new List<KeyValuePair<UInt32, int>>();
-            for (int i = 0; i < dat.FileList.Count; i++)
+            for (int i = 0; i < countFiles; i++)
             {
-                if (!dat.FileList[i].IsDeleted) list.Add(new KeyValuePair<UInt32, int>(dat.FileList[i].Offset, i));
+                if (!dat.FileList[i].IsVirtual) list.Add(new KeyValuePair<UInt32, int>(dat.FileList[i].Offset, i));
             }
             // сортируем по значению offset
             list.Sort((x, y) => x.Key.CompareTo(y.Key));
-
-            bool hasVirtual = false;
 
             // Copy and write files content from source dat
             foreach (var item in list)
             {
                 int i = item.Value;
 
-                if (dat.FileList[i].IsVirtual) {
-                    hasVirtual = true;
-                    continue;
-                }
                 if (!mod || dat.FileList[i].UnpackedSize > 10485760 || i % 5 == 0) DAT.OnWrite(dat.FileList[i].FilePath);
 
                 UInt32 offset = (UInt32)bw.BaseStream.Position;
@@ -132,13 +137,13 @@ namespace DATLib
 
             // Write virtual files content to saving dat
             if (hasVirtual) {
-                for (int i = 0; i < dat.FileList.Count; i++)
+                for (int i = 0; i < countFiles; i++)
                 {
                     if (dat.FileList[i].IsVirtual) {
                         if (!mod || dat.FileList[i].UnpackedSize > 1048576 || i % 5 == 0) DAT.OnWrite(dat.FileList[i].FilePath);
 
                         dat.FileList[i].Offset = (UInt32)bw.BaseStream.Position;
-                        bw.Write(dat.FileList[i].GetCompressedData(), 0, dat.FileList[i].PackedSize);
+                        bw.Write(dat.FileList[i].GetCompressedData(), 0, dat.FileList[i].UnpackedSize);
                     }
                 }
             }
@@ -157,7 +162,7 @@ namespace DATLib
 
             RBinaryBigEndian br = new RBinaryBigEndian(File.Open(dat.DatFileName, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite));
             dat.br = br;
-            for (int i = 0; i < dat.FileList.Count; i++) dat.FileList[i].br = br;
+            for (int i = 0; i < countFiles; i++) dat.FileList[i].br = br;
         }
 
         #endregion
@@ -167,6 +172,8 @@ namespace DATLib
         private static void WriteDirTreeSub(DAT dat, BinaryWriter bw)
         {
             UInt32 startDirTreeAddr = (UInt32)bw.BaseStream.Position;
+
+            dat.FileList.Sort((a, b) => a.FilePath.CompareTo(b.FilePath)); // сортировка для движка
 
             // Write DirTree
             for (int i = 0; i < dat.FilesTotal; i++) {

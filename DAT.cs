@@ -16,10 +16,11 @@ namespace DATLib
 
         internal List<DATFile> FileList { get; set; }
 
+        internal int  FilesTotal { get; set; }
+
         // only for Fallout 2 DAT
         internal uint FileSizeFromDat { get; set; }
         internal int  TreeSize { get; set; }
-        internal int  FilesTotal { get; set; }
 
         // only for Fallout 1 DAT
         internal int DirCount { get; set; }
@@ -104,7 +105,7 @@ namespace DATLib
 
         public bool RemoveFiles(List<string> filesList)
         {
-            if (IsFallout2Type) FilesTotal -= filesList.Count;
+            FilesTotal -= filesList.Count;
 
             bool realDeleted = false;
 

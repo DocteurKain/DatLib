@@ -126,6 +126,7 @@ namespace DATLib
                 {
                     directories.Add(ReadString(br) + '\\');
                 }
+                if (directories[0] == ".\\") directories[0] = String.Empty;
 
                 br = new RBinaryBigEndian(br.BaseStream);
                 for (var i = 0; i < dat.DirCount; i++)
@@ -147,6 +148,7 @@ namespace DATLib
                         DatFiles.Add(file);
                     }
                 }
+                dat.FilesTotal = DatFiles.Count;
             }
             return DatFiles;
         }
