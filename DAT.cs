@@ -8,6 +8,7 @@ namespace DATLib
 {
     // This is a helper class for handling multiple DAT files.
     // https://fallout.fandom.com/wiki/DAT_file
+
     public class DAT
     {
         internal BinaryReader br { get; set; }
@@ -35,24 +36,26 @@ namespace DATLib
             br.Close();
         }
 
-        private int CountChar(string s, char c)
-        {
-            int count = 0;
-            foreach (char ch in s) {
-                if (ch == c) count++;
-            }
-            return count;
-        }
+        //private int CountChar(string s, char c)
+        //{
+        //    int count = 0;
+        //    foreach (char ch in s) {
+        //        if (ch == c) count++;
+        //    }
+        //    return count;
+        //}
 
-        public List<DATFile> GetFilesByPattern(string pattern)
-        {
-            List<DATFile> Files = new List<DATFile>();
-            foreach (DATFile file in FileList) {
-                if ((pattern == string.Empty) || (file.FilePath.Contains(pattern) && ((CountChar(file.FilePath, '\\') - 1 == CountChar(pattern, '\\')))))
-                    Files.Add(file);
-            }
-            return Files;
-        }
+        //public List<DATFile> GetFilesByPattern(string pattern)
+        //{
+
+        //    List<DATFile> Files = new List<DATFile>();
+        //    foreach (DATFile file in FileList)
+        //    {
+        //        if (file.FilePath.Contains(pattern) && ((CountChar(file.FilePath, '\\') - 1 == CountChar(pattern, '\\'))))
+        //            Files.Add(file);
+        //    }
+        //    return Files;
+        //}
 
         /// <summary>
         /// Возвращает файл находящийся в DAT по его пути
@@ -61,7 +64,7 @@ namespace DATLib
         public DATFile GetFileByName(string fileName)
         {
             foreach (DATFile file in FileList) {
-                if (file.FilePath == fileName) return file;
+                if (!file.IsDeleted && file.FilePath == fileName) return file;
             }
             return null;
         }

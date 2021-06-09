@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Tool library for Dat files Fallout 1/2")]
+[assembly: AssemblyTitle("Tool library for Dat files Fallout 1/2 (w/o compression support for Fallout 1)")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("by Rotators & Fakels")]
 [assembly: AssemblyProduct("DatLab")]
-[assembly: AssemblyCopyright("Copyright © 2012 - 2020")]
+[assembly: AssemblyCopyright("Copyright © 2012 - 2021")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -33,4 +33,4 @@ using System.Runtime.InteropServices;
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.1.0")]
+[assembly: AssemblyFileVersion("1.1.1")]
