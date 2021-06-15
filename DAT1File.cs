@@ -5,12 +5,24 @@ namespace DATLib
 {
     internal class DAT1File : DATFile
     {
+        protected override byte[] DecompressStream()
+        {
+            RBinaryBigEndian bbr = new RBinaryBigEndian(base.br.BaseStream);
+            //bbr.BaseStream.Seek(0, SeekOrigin.Begin);
+
+            var LZSS = new LZSS(bbr, base.UnpackedSize);
+            base.fileBuffer = LZSS.Decompress();
+
+            bbr.Dispose();
+            return base.fileBuffer;
+        }
+
         protected override byte[] DecompressData()
         {
             using (MemoryStream st = new MemoryStream(tempBuffer))
             {
                 RBinaryBigEndian bbr = new RBinaryBigEndian(st);
-                bbr.BaseStream.Seek(0, SeekOrigin.Begin);
+                //bbr.BaseStream.Seek(0, SeekOrigin.Begin);
 
                 var LZSS = new LZSS(bbr, base.UnpackedSize);
                 var bytes = LZSS.Decompress();
@@ -20,6 +32,7 @@ namespace DATLib
             }
         }
 
+        #region Save
         #if SaveBuild
 
         internal override byte[] GetCompressedData()
@@ -65,5 +78,6 @@ namespace DATLib
         }
         */
         #endif
+        #endregion
     }
 }

@@ -93,20 +93,20 @@ namespace DATLib
         /// <param name="datFolder">Папка DAT которую необходимо распаковать</param>
         /// <param name="datFile"></param>
         /// <returns></returns>
-        public static bool ExtractFolder(string unpackPath, string datFolder, string datFile)
-        {
-            foreach (DAT dat in openDat)
-            {
-                if (dat.DatFileName == datFile) {
-                    UnsetCheckFolder();
+        //public static bool ExtractFolder(string unpackPath, string datFolder, string datFile)
+        //{
+        //    foreach (DAT dat in openDat)
+        //    {
+        //        if (dat.DatFileName == datFile) {
+        //            UnsetCheckFolder();
 
-                    // TODO
+        //            // TODO
 
-                    return true;
-                }
-            }
-            return false;
-        }
+        //            return true;
+        //        }
+        //    }
+        //    return false;
+        //}
 
         public static bool ExtractFile(string unpackPath, string file, string datFile)
         {
@@ -173,6 +173,34 @@ namespace DATLib
                 }
             }
             return false;
+        }
+
+        public static bool FileExists(string filePath, string datFile)
+        {
+            foreach (DAT dat in openDat)
+            {
+                if (dat.DatFileName == datFile) return (DATReader.GetFile(dat, filePath.TrimStart('\\')) != null);
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Получает массив данных файла.
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="datFile"></param>
+        /// <returns></returns>
+        public static byte[] GetFileData(string filePath, string datFile)
+        {
+            foreach (DAT dat in openDat)
+            {
+                if (dat.DatFileName == datFile) {
+                    UnsetCheckFolder();
+                    DATFile datfile = DATReader.GetFile(dat, filePath);
+                    return (datfile != null) ? datfile.GetFile() : null;
+                }
+            }
+            return null;
         }
 
         public static Dictionary<String, String> GetFileList(string datFile)
@@ -265,6 +293,7 @@ namespace DATLib
             openDat.Clear();
         }
 
+        #region Save
         #if SaveBuild
 
         public static void CreateDatFile(string datFile, DAT.FalloutType type)
@@ -341,5 +370,6 @@ namespace DATLib
         }
 
         #endif
+        #endregion
     }
 }

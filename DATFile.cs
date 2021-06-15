@@ -7,6 +7,8 @@ namespace DATLib
     {
         protected static byte[] tempBuffer; // temp buffer for extracted file
 
+        protected byte[] fileBuffer;
+
         internal BinaryReader br;
 
         /// <summary>
@@ -36,12 +38,14 @@ namespace DATLib
 
         internal string ErrorMsg  { get; set; }
 
+        internal bool IsDeleted { get;  set; }                         // True - файл будет удален из DAT при сохранении
+
+        #region Save
         #if SaveBuild
 
         public String RealFile  { get; set; } // path to file on disk
 
         internal bool IsVirtual { get { return PackedSize == -1; } }   // True - файл расположен вне DAT
-        internal bool IsDeleted { get;  set; }                         // True - файл будет удален из DAT при сохранении
 
         internal void Rename(string newName)
         {
@@ -94,24 +98,23 @@ namespace DATLib
         }
 
         #endif
+        #endregion
 
-        private byte[] decompressStream()
+        protected virtual byte[] DecompressStream()
         {
-            byte[] data;
             using (MemoryStream outStream = new MemoryStream())
             {
-                using (zlib.ZOutputStream outZStream = new zlib.ZOutputStream(outStream)) {
-                    byte[] buffer = new byte[br.BaseStream.Length];
+                using (zlib.ZOutputStream outZStream = new zlib.ZOutputStream(outStream))
+                {
+                    byte[] buffer = new byte[512];
                     int len;
                     try
                     {
-                        while ((len = br.Read(buffer, 0, (int)br.BaseStream.Length)) > 0) {
-                            outZStream.Write(buffer, 0, len);
-                        }
+                        while ((len = br.Read(buffer, 0, 512)) > 0) outZStream.Write(buffer, 0, len);
                         outZStream.Flush();
-                        data = outStream.ToArray();
+                        fileBuffer = outStream.ToArray();
                     }
-                    catch(zlib.ZStreamException ex)
+                    catch (zlib.ZStreamException ex)
                     {
                         ErrorMsg = ex.Message;
                         return null;
@@ -122,7 +125,7 @@ namespace DATLib
                     }
                 }
             }
-            return data;
+            return fileBuffer;
         }
 
         protected virtual byte[] DecompressData()
@@ -155,15 +158,32 @@ namespace DATLib
         // Read whole file into a temp buffer
         internal byte[] GetFileData()
         {
-            if (br == null) return null;
+            if (fileBuffer != null) return fileBuffer;
 
+            if (br == null) return null;
             br.BaseStream.Seek(Offset, SeekOrigin.Begin);
             int size = (Compression) ? PackedSize : UnpackedSize;
 
             if (tempBuffer == null || size != tempBuffer.Length) tempBuffer = new byte[size];
 
             br.Read(tempBuffer, 0, size);
-            return (Compression) ? DecompressData() : tempBuffer;;
+            return (Compression) ? DecompressData() : tempBuffer;
+        }
+
+        // Read whole file into a file buffer
+        internal byte[] GetFile()
+        {
+            if (fileBuffer != null) return fileBuffer;
+
+            if (br == null) return null;
+            br.BaseStream.Seek(Offset, SeekOrigin.Begin);
+
+            if (!Compression) {
+                if (fileBuffer == null) fileBuffer = new byte[UnpackedSize];
+                br.Read(fileBuffer, 0, UnpackedSize);
+                return fileBuffer;
+            }
+            return DecompressStream();
         }
 
         // Read file content from dat
