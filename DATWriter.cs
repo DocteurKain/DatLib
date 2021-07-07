@@ -23,6 +23,19 @@ namespace DATLib
 
     internal static class DATWriter
     {
+        // для исправления ошибки MS при сортировке с символом подчеркивания '_'
+        static public int FilePathCompare(DATFile a, DATFile b)
+        {
+            int len = Math.Min(a.FilePath.Length, b.FilePath.Length);
+            for (int i = 0; i < len; i++)
+            {
+                if (a.FilePath[i] == b.FilePath[i]) continue;
+
+                return (a.FilePath[i] > b.FilePath[i]) ? 1 : -1;
+            }
+            return 0;
+        }
+
         #region Fallout 1 dat format
 
         private static SortedDictionary<string, List<DATFile>> BuildDict(DAT dat)
@@ -64,7 +77,8 @@ namespace DATLib
             bool hasVirtual = false;
             int countFiles = dat.FileList.Count;
 
-            dat.FileList.Sort((a, b) => a.FilePath.CompareTo(b.FilePath)); // сортировка для движка
+            //dat.FileList.Sort((a, b) => a.FilePath.CompareTo(b.FilePath)); // сортировка для движка
+            dat.FileList.Sort(FilePathCompare);
 
             for (int i = 0; i < countFiles; i++)
             {
@@ -173,7 +187,8 @@ namespace DATLib
         {
             UInt32 startDirTreeAddr = (UInt32)bw.BaseStream.Position;
 
-            dat.FileList.Sort((a, b) => a.FilePath.CompareTo(b.FilePath)); // сортировка для движка
+            //dat.FileList.Sort((a, b) => a.FilePath.CompareTo(b.FilePath)); // сортировка для движка
+            dat.FileList.Sort(FilePathCompare);
 
             // Write DirTree
             for (int i = 0; i < dat.FilesTotal; i++) {
